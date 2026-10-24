@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+*.log
+# Received files and personal uploads never belong in the repo.
+shared/*
+!shared/.gitkeep
+# Optional macOS helpers are built from native/*.m (see README).
+native/oneglass_os
+native/spu_bump

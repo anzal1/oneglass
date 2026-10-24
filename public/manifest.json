@@ -1,0 +1,58 @@
+{
+  "name": "OneGlass",
+  "short_name": "OneGlass",
+  "description": "Make your phone, tablet, and laptop one continuous screen with NameDrop & P2P Continuity.",
+  "start_url": "/?role=phone",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#08090a",
+  "theme_color": "#08090a",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%2308090a'/%3E%3Crect x='22' y='26' width='52' height='76' rx='8' stroke='%235e6ad2' stroke-width='6' fill='none'/%3E%3Crect x='74' y='38' width='32' height='64' rx='6' stroke='%2338bdf8' stroke-width='6' fill='none'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%2308090a'/%3E%3Crect x='22' y='26' width='52' height='76' rx='8' stroke='%235e6ad2' stroke-width='6' fill='none'/%3E%3Crect x='74' y='38' width='32' height='64' rx='6' stroke='%2338bdf8' stroke-width='6' fill='none'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Camera Scanner",
+      "short_name": "Scanner",
+      "description": "Continuity Camera Document Scanner",
+      "url": "/?action=scanner",
+      "icons": [{ "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%2308090a'/%3E%3Cpath d='M32 44V32h12M84 32h12v12M96 84v12H84M44 96H32V84' stroke='%2338bdf8' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E", "sizes": "96x96" }]
+    },
+    {
+      "name": "Screen Portal",
+      "short_name": "Portal",
+      "description": "Screen Portal Stream",
+      "url": "/?action=portal",
+      "icons": [{ "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%2308090a'/%3E%3Crect x='28' y='36' width='72' height='56' rx='10' stroke='%235e6ad2' stroke-width='6' fill='none'/%3E%3C/svg%3E", "sizes": "96x96" }]
+    }
+  ],
+  "share_target": {
+    "action": "/api/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "file",
+          "accept": ["image/*", "application/pdf", "text/*", "*/*"]
+        }
+      ]
+    }
+  }
+}

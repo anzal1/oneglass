@@ -1,0 +1,25 @@
+{
+  "name": "oneglass",
+  "version": "1.0.0",
+  "description": "OneGlass — Make any phone, tablet, and laptop one continuous screen with NameDrop & P2P Continuity.",
+  "main": "server.mjs",
+  "bin": {
+    "oneglass": "./bin/oneglass.mjs"
+  },
+  "scripts": {
+    "start": "node ./bin/oneglass.mjs"
+  },
+  "keywords": [
+    "namedrop",
+    "continuity",
+    "second-screen",
+    "webrtc",
+    "cross-device"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "ws": "^8.22.0"
+  }
+}

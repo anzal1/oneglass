@@ -1,0 +1,3800 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#08090a">
+<link rel="manifest" href="/manifest.json">
+<title>OneGlass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<style>
+  :root {
+    --bg: #08090a;
+    --panel: rgba(14, 15, 19, 0.84);
+    --panel-hi: rgba(20, 21, 26, 0.94);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-hi: rgba(255, 255, 255, 0.17);
+    --ink: #f2f3f5;
+    --muted: #8a8f98;
+    --subtle: #575b66;
+    --indigo: #5e6ad2;
+    --cyan: #38bdf8;
+    --amber: #f59e0b;
+    --emerald: #2cc990;
+    --rose: #f43f5e;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font: 13px/1.45 "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    letter-spacing: -0.011em;
+    font-variant-numeric: tabular-nums;
+    touch-action: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .svg-ic {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    flex-shrink: 0;
+  }
+
+  .kbd {
+    font: 10.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-bottom-width: 2px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    letter-spacing: 0;
+  }
+
+  #gl-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Precision Linear-Style Bezel Strip Rails */
+  #strips-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .bezel-strip {
+    position: fixed;
+    pointer-events: auto;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(14, 15, 19, 0.90);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--strip-color, var(--indigo));
+    box-shadow: 0 0 22px rgba(94, 106, 210, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    transition: opacity 160ms var(--ease-out), border-color 160ms ease;
+    touch-action: none;
+  }
+  .bezel-strip:active { cursor: grabbing; }
+  .bezel-strip .strip-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink);
+    padding: 2px 10px;
+    white-space: nowrap;
+    pointer-events: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .bezel-strip.edge-left .strip-label,
+  .bezel-strip.edge-right .strip-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    padding: 10px 2px;
+  }
+  .strip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--strip-color, var(--indigo));
+    box-shadow: 0 0 8px var(--strip-color, var(--indigo));
+  }
+  .strip-coord {
+    font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--muted);
+  }
+
+  #phone-top-portal {
+    position: fixed;
+    top: 0;
+    left: 8%;
+    width: 84%;
+    height: 3px;
+    border-radius: 0 0 99px 99px;
+    background: linear-gradient(90deg, transparent, var(--indigo), var(--cyan), var(--amber), transparent);
+    box-shadow: 0 2px 24px rgba(94, 106, 210, 0.75);
+    z-index: 10;
+    display: none;
+    pointer-events: none;
+  }
+
+  /* Main Chrome Shell */
+  #ui-shell {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: max(12px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));
+    pointer-events: none;
+  }
+  .interactive { pointer-events: auto; }
+
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .status-rail {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel-hi);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border);
+    padding: 5px 12px 5px 10px;
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .brand-mark {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, #5e6ad2, #38bdf8);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+  .island-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #525866;
+    transition: background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+  }
+  .island-dot.connected {
+    background: var(--emerald);
+    box-shadow: 0 0 8px var(--emerald);
+  }
+  .island-title { font-weight: 600; font-size: 12.5px; color: var(--ink); }
+  .sep-v { width: 1px; height: 13px; background: var(--border); }
+  .island-sub { font-size: 12px; color: var(--muted); }
+  .edge-badge {
+    font: 600 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .token-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    font: 10.5px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #38bdf8;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+  }
+  .token-pill.is-pending { opacity: 0.6; }
+  .token-pill.is-warn {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.08);
+    border-color: rgba(251, 191, 36, 0.3);
+  }
+  @media (max-width: 480px) {
+    /* The full label does not fit next to the island title on phones; the icon,
+       colour and title tooltip carry the state, and the insecure banner explains it. */
+    #token-pill-label { display: none; }
+    .token-pill { padding: 2px 5px; }
+  }
+
+  #insecure-banner {
+    align-self: center;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: min(640px, 100%);
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: var(--ink);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  #insecure-banner[hidden] { display: none; }
+  #insecure-banner strong { color: #fbbf24; font-weight: 600; }
+  #insecure-banner p { margin: 0; flex: 1; min-width: 0; }
+  #insecure-banner button {
+    flex: none;
+    font: inherit;
+    font-size: 11px;
+    color: var(--ink);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+  .card-hint-pill {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #38bdf8;
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    letter-spacing: -0.01em;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    animation: hintPulse 2.4s ease-in-out infinite;
+    z-index: 5;
+    transition: opacity 160ms ease;
+  }
+  @keyframes hintPulse {
+    0%, 100% { opacity: 0.9; transform: translateX(-50%) scale(1); }
+    50% { opacity: 1; transform: translateX(-50%) scale(1.02); border-color: rgba(56, 189, 248, 0.75); }
+  }
+  .seismic-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    font: 10.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--muted);
+  }
+  .seismic-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 11px;
+    width: 30px;
+  }
+  .seismic-bars i {
+    flex: 1;
+    background: var(--emerald);
+    height: 20%;
+    border-radius: 1px;
+    transition: transform 60ms linear, background-color 120ms ease;
+    transform-origin: bottom;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    background: var(--panel);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    color: var(--ink);
+    padding: 5.5px 10px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 120ms var(--ease-out), border-color 140ms ease, background-color 140ms ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn:hover {
+      border-color: var(--border-hi);
+      background: rgba(26, 28, 35, 0.92);
+    }
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn.primary {
+    background: #5e6ad2;
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 4px 14px rgba(94, 106, 210, 0.35);
+    color: #fff;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn.primary:hover { background: #6875df; }
+  }
+  .btn.accent {
+    background: rgba(94, 106, 210, 0.14);
+    border-color: rgba(94, 106, 210, 0.38);
+    color: #dfe2ff;
+  }
+
+  /* Collapsible QR Modal (Linear Surface) */
+  #qr-modal {
+    margin: auto;
+    transform-origin: top right;
+    transition: transform 220ms var(--ease-drawer), opacity 180ms var(--ease-out), filter 180ms ease;
+  }
+  #qr-modal.collapsed {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translate3d(0, -18px, 0) scale(0.96);
+    pointer-events: none;
+  }
+  .qr-glass {
+    background: var(--panel-hi);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid var(--border-hi);
+    border-radius: 14px;
+    padding: 20px 22px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    max-width: 460px;
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  .qr-frame {
+    width: 112px;
+    height: 112px;
+    padding: 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .qr-frame svg { width: 100%; height: 100%; display: block; }
+  .qr-copy h2 { margin: 0 0 5px; font-size: 14.5px; font-weight: 600; letter-spacing: -0.02em; }
+  .qr-copy p { margin: 0 0 10px; font-size: 12px; color: var(--muted); line-height: 1.48; }
+  .url-chip {
+    font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #a5b4fc;
+    background: rgba(94, 106, 210, 0.12);
+    border: 1px solid rgba(94, 106, 210, 0.28);
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+    user-select: text;
+    -webkit-user-select: text;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .url-chip:hover {
+    background: rgba(94, 106, 210, 0.22);
+    border-color: rgba(94, 106, 210, 0.55);
+  }
+
+  /* Multi-Network QR Switcher Pills */
+  .qr-endpoints-nav {
+    display: flex;
+    gap: 4px;
+    margin: 8px 0 10px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    flex-wrap: wrap;
+  }
+  .qr-endpoint-pill {
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+    transition: color 140ms ease, background-color 140ms ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .qr-endpoint-pill:hover {
+    color: var(--ink);
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .qr-endpoint-pill.active {
+    color: #fff;
+    background: rgba(94, 106, 210, 0.28);
+    border-color: rgba(94, 106, 210, 0.6);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  }
+  .qr-endpoint-pill .pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.7;
+  }
+
+  /* Bottom Dock */
+  .bottom-dock {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .dock-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--panel-hi);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border);
+    padding: 6px 8px;
+    border-radius: 11px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Linear Command Palette (`⌘K`) */
+  #cmd-backdrop,
+  #cmd-palette-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 13vh;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms var(--ease-out);
+  }
+  #cmd-backdrop.open,
+  #cmd-palette-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .cmd-dialog {
+    width: min(520px, 92vw);
+    background: #101115;
+    border: 1px solid var(--border-hi);
+    border-radius: 12px;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    transform: scale(0.96) translate3d(0, -8px, 0);
+    transition: transform 180ms var(--ease-out);
+  }
+  #cmd-backdrop.open .cmd-dialog {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  .cmd-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cmd-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--ink);
+    font: 13.5px/1.4 inherit;
+  }
+  .cmd-input::placeholder { color: var(--subtle); }
+  .cmd-list {
+    max-height: 310px;
+    overflow-y: auto;
+    padding: 6px;
+  }
+  .cmd-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    color: var(--ink);
+    font-size: 12.5px;
+  }
+  .cmd-item.selected, .cmd-item:hover {
+    background: rgba(94, 106, 210, 0.18);
+  }
+  .cmd-item-left {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .cmd-cat {
+    font-size: 10.5px;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+
+  /* Universal File Cards (Linear Surface) */
+  .file-card {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 20;
+    background: rgba(15, 16, 21, 0.90);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border-hi);
+    border-radius: 14px;
+    padding: 8px;
+    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    cursor: grab;
+    touch-action: none;
+    will-change: transform, opacity;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    transition: border-color 160ms ease, box-shadow 160ms ease, opacity 180ms var(--ease-out);
+  }
+  .file-card:active { cursor: grabbing; }
+  .file-card.crossing {
+    border-color: var(--cyan);
+    box-shadow: 0 0 38px rgba(56, 189, 248, 0.45), 0 24px 54px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  .file-card.phantom {
+    pointer-events: none;
+    border-color: var(--amber);
+    box-shadow: 0 0 44px rgba(245, 158, 11, 0.5), 0 24px 54px rgba(0, 0, 0, 0.8);
+  }
+
+  .card-stage {
+    width: 100%;
+    flex: 1;
+    min-height: 136px;
+    border-radius: 9px;
+    overflow: hidden;
+    position: relative;
+    background: #0b0c10;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card-stage img, .card-stage video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+  }
+  .badge-ext {
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    background: rgba(10, 11, 14, 0.82);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--ink);
+    font: 600 9.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.04em;
+    padding: 3px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    z-index: 2;
+  }
+  .card-close {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    background: rgba(10, 11, 14, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 140ms var(--ease-out), transform 120ms var(--ease-out);
+    z-index: 3;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .file-card:hover .card-close { opacity: 1; }
+  }
+  @media (hover: none) {
+    .card-close { opacity: 0.85; }
+  }
+  .card-close:active { transform: scale(0.92); }
+
+  .audio-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    width: 100%;
+  }
+  .vinyl-disc {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #111, #27272a, #111, #3f3f46, #111);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: spin 6s linear infinite;
+  }
+  .vinyl-core {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--indigo);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .code-stage {
+    width: 100%;
+    height: 100%;
+    padding: 26px 10px 8px;
+    font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #d4d8e2;
+    background: #090a0d;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    text-align: left;
+  }
+
+  .doc-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px;
+    text-align: center;
+  }
+  .doc-icon {
+    width: 44px;
+    height: 52px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-hi);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--ink);
+  }
+
+  .card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 0 2px;
+  }
+  .card-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 145px;
+  }
+  .card-size { font-size: 11px; color: var(--muted); }
+  .card-actions { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+  .chip-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 10.5px;
+    font-weight: 500;
+    padding: 3px 7px;
+    border-radius: 5px;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: transform 120ms var(--ease-out), background-color 140ms ease;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .chip-btn:hover { background: rgba(255, 255, 255, 0.12); }
+  .chip-btn:active { transform: scale(0.95); }
+  .chip-btn.reveal-btn {
+    background: rgba(44, 201, 144, 0.14);
+    border-color: rgba(44, 201, 144, 0.4);
+    color: #4ade80;
+  }
+  .chip-btn.reveal-btn:hover {
+    background: rgba(44, 201, 144, 0.25);
+    border-color: rgba(44, 201, 144, 0.7);
+  }
+  .chip-btn.share-btn {
+    background: rgba(94, 106, 210, 0.15);
+    border-color: rgba(94, 106, 210, 0.42);
+    color: #a5b4fc;
+  }
+  .chip-btn.share-btn:hover {
+    background: rgba(94, 106, 210, 0.28);
+    border-color: rgba(94, 106, 210, 0.7);
+  }
+
+  /* Sleek Emerald Banner Pill HUD (⌘V / Ctrl+V in Any App + Show in Finder / Explorer) */
+  #clipboard-hud {
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translate3d(-50%, -70px, 0) scale(0.96);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 150;
+    transition: transform 280ms var(--ease-drawer), opacity 220ms var(--ease-out);
+    max-width: 94vw;
+  }
+  #clipboard-hud.show {
+    transform: translate3d(-50%, 0, 0) scale(1);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .clipboard-hud-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 14px 7px 12px;
+    background: rgba(8, 26, 18, 0.95);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(44, 201, 144, 0.45);
+    border-radius: 999px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 24px rgba(44, 201, 144, 0.28);
+    color: #f2f3f5;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .hud-pill-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2cc990;
+    box-shadow: 0 0 10px #2cc990;
+    flex-shrink: 0;
+    animation: hudPulse 2s infinite ease-in-out;
+  }
+  @keyframes hudPulse {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.35); }
+  }
+  .hud-pill-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 58vw;
+  }
+  .hud-pill-text strong {
+    color: #4ade80;
+    font-weight: 600;
+  }
+  .hud-pill-loc {
+    color: rgba(242, 243, 245, 0.8);
+  }
+  .hud-reveal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(44, 201, 144, 0.18);
+    border: 1px solid rgba(44, 201, 144, 0.55);
+    color: #f2f3f5;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 140ms ease, border-color 140ms ease, transform 120ms ease;
+  }
+  .hud-reveal-btn:hover {
+    background: rgba(44, 201, 144, 0.35);
+    border-color: rgba(44, 201, 144, 0.85);
+    transform: translateY(-1px);
+  }
+  .hud-reveal-btn:active {
+    transform: translateY(0) scale(0.97);
+  }
+  .hud-close-btn {
+    background: transparent;
+    border: none;
+    color: #8a8f98;
+    cursor: pointer;
+    padding: 3px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: color 120ms ease;
+  }
+  .hud-close-btn:hover {
+    color: #fff;
+  }
+
+  /* 1-Tap OS Share Sheet Modal */
+  .sharesheet-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    z-index: 160;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms var(--ease-out);
+  }
+  .sharesheet-modal-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .sharesheet-card {
+    background: var(--panel-hi);
+    border: 1px solid var(--border-hi);
+    border-radius: 16px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    width: 100%;
+    max-width: 520px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transform: scale(0.96) translate3d(0, 10px, 0);
+    transition: transform 220ms var(--ease-drawer);
+  }
+  .sharesheet-modal-backdrop.open .sharesheet-card {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  .sharesheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sharesheet-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sharesheet-title-wrap h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .sharesheet-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: color 140ms ease;
+  }
+  .sharesheet-close-btn:hover {
+    color: var(--ink);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .sharesheet-sub {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .sharesheet-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .sharesheet-section-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .sharesheet-section-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    width: fit-content;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .android-badge {
+    background: rgba(44, 201, 144, 0.16);
+    color: #4ade80;
+    border: 1px solid rgba(44, 201, 144, 0.35);
+  }
+  .ios-badge {
+    background: rgba(56, 189, 248, 0.16);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+  }
+  .sharesheet-text {
+    margin: 0;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .sharesheet-text strong {
+    color: #fff;
+  }
+  .sharesheet-text code {
+    font-family: ui-monospace, Menlo, monospace;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #a5b4fc;
+  }
+  .sharesheet-beam-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .sharesheet-beam-url {
+    flex: 1;
+    min-width: 180px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 11px;
+    color: var(--cyan);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .copy-beam-btn {
+    white-space: nowrap;
+    padding: 6px 12px;
+    font-size: 11.5px;
+  }
+
+  #toast {
+    opacity: 0;
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translate3d(-50%, -12px, 0) scale(0.96);
+    background: var(--panel-hi);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-hi);
+    color: var(--ink);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 100;
+    pointer-events: none;
+    transition: transform 200ms var(--ease-out), opacity 160ms var(--ease-out);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6);
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+
+  @media (max-width: 768px) {
+    #Desktop-Presets-Bar { display: none !important; }
+    .seismic-pill { display: none !important; }
+    .qr-glass { flex-direction: column; text-align: center; padding: 18px; max-width: 92vw; }
+  }
+
+  /* ==========================================================================
+     OneGlass redesign layer. Tokens first; everything below reads from them.
+     One translucent level only: island, dock and sheets. Nothing translucent
+     sits on top of another translucent surface.
+     ========================================================================== */
+  :root {
+    --n0: #0b0b0c; --n1: #151517; --n2: #1d1d20; --n3: #2c2c30;
+    --line: rgba(255, 255, 255, 0.09); --line-hi: rgba(255, 255, 255, 0.16);
+    --text: #f5f5f7; --text-2: #a1a1a6; --text-3: #75757b;
+    --accent: #0a84ff; --accent-hi: #3d9cff; --accent-fill: #0071e3; --accent-soft: rgba(10, 132, 255, 0.16);
+    --success: #30d158; --warning: #ffb340; --danger: #ff453a;
+    --material: rgba(22, 22, 25, 0.72);
+    --r-sm: 8px; --r-md: 12px; --r-lg: 20px; --r-full: 999px;
+    --fs-xs: 11px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 20px; --fs-xl: 28px;
+    --font: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+    /* legacy names mapped onto the new scale */
+    --bg: var(--n0); --panel: var(--n1); --panel-hi: var(--n2);
+    --border: var(--line); --border-hi: var(--line-hi);
+    --ink: var(--text); --muted: var(--text-2); --subtle: var(--text-3);
+    --indigo: var(--accent); --cyan: var(--accent-hi); --emerald: var(--success);
+    --amber: var(--warning); --rose: var(--danger);
+    --ease-drawer: var(--ease-sheet);
+    color-scheme: dark;
+  }
+  html, body { background: var(--n0); }
+  body { font-family: var(--font); font-size: var(--fs-sm); color: var(--text); letter-spacing: -0.006em; -webkit-font-smoothing: antialiased; }
+  kbd, .kbd, code, .url-chip, .strip-coord { font-family: var(--mono); }
+
+  /* one translucency level */
+  html body *, html body *::before, html body *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  html body .status-rail, html body .dock-bar, html body .qr-glass, html body .og-thumb-dock,
+  html body .cmd-dialog, html body #og-mobile-tools-sheet {
+    backdrop-filter: blur(24px) saturate(1.5) !important; -webkit-backdrop-filter: blur(24px) saturate(1.5) !important;
+  }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  :focus:not(:focus-visible) { outline: none; }
+
+  /* shell */
+  #ui-shell { padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .top-row { flex-wrap: nowrap; align-items: center; }
+
+  /* status island */
+  .status-rail {
+    height: 36px; gap: 10px; padding: 0 14px 0 8px; min-width: 0; max-width: 100%;
+    background: var(--material); border: 1px solid var(--line); border-radius: var(--r-full);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); overflow: hidden;
+  }
+  .brand-mark { width: 22px; height: 22px; border-radius: var(--r-full); background: var(--text); color: var(--n0); flex: none; }
+  .island-title { font-size: var(--fs-sm); font-weight: 600; letter-spacing: -0.01em; flex: none; }
+  .island-sub { font-size: var(--fs-sm); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; display: inline-flex; gap: 10px; }
+  .sep-v { background: var(--line-hi); flex: none; }
+  .island-dot { width: 8px; height: 8px; background: var(--text-3); flex: none; }
+  .island-dot.connected { background: var(--success); box-shadow: none; }
+  html[data-role="laptop"] .island-dot.connected { display: none; }
+  .peer-chip { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+  .peer-chip i { width: 8px; height: 8px; border-radius: var(--r-full); background: var(--success); }
+  .seismic-pill { display: none !important; }
+  .edge-badge { font: 500 var(--fs-xs)/1 var(--font); letter-spacing: 0; text-transform: none; color: var(--text-2); background: none; border: 0; padding: 0; }
+  .token-pill {
+    font: 500 var(--fs-xs)/1 var(--font); letter-spacing: 0; padding: 5px 9px; border-radius: var(--r-full);
+    color: var(--text-2); background: rgba(255, 255, 255, 0.06); border: 0; flex: none;
+  }
+  .token-pill.is-warn { color: var(--warning); background: rgba(255, 179, 64, 0.12); }
+  html body #p2p-status-chip {
+    background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important;
+    height: auto !important; font: 500 var(--fs-xs)/1 var(--mono) !important; color: var(--text-3) !important; flex: none;
+  }
+  html body #p2p-status-chip.is-connected { color: var(--success) !important; }
+  @media (max-width: 720px) { html body #p2p-status-chip { display: none !important; } }
+  @media (max-width: 480px) { .island-title, .status-rail .sep-v, .status-rail > span[class*="sep"] { display: none; } }
+  #edge-cue { position: fixed; z-index: 35; pointer-events: none; opacity: 0; }
+  #edge-cue[data-edge="right"], #edge-cue[data-edge="left"] { top: 0; bottom: 0; width: 56px;
+    background: radial-gradient(56px 38% at var(--cue-x) var(--cue-pos), rgba(10, 132, 255, 0.32), transparent 100%); }
+  #edge-cue[data-edge="right"] { right: 0; --cue-x: 100%; }
+  #edge-cue[data-edge="left"] { left: 0; --cue-x: 0%; }
+  #edge-cue[data-edge="top"], #edge-cue[data-edge="bottom"] { left: 0; right: 0; height: 56px;
+    background: radial-gradient(38% 56px at var(--cue-pos) var(--cue-y), rgba(10, 132, 255, 0.32), transparent 100%); }
+  #edge-cue[data-edge="top"] { top: 0; --cue-y: 0%; }
+  #edge-cue[data-edge="bottom"] { bottom: 0; --cue-y: 100%; }
+  /* the pairing sheet clears the paired phone's edge strip */
+  html:has(.bezel-strip.edge-right) #qr-modal { margin-right: 28px; width: min(380px, calc(100% - 28px)); }
+  html body #og-btn-files { order: -1; }
+  /* phone: flicks always leave through the top, so the old side portal bar was misleading; the send cue covers it */
+  #phone-top-portal { display: none !important; }
+  html body .og-pill-btn .og-lbl, html body .og-pill-btn .og-ico { color: var(--text-2) !important; }
+  html body #og-btn-files .og-lbl, html body #og-btn-files .og-ico { color: var(--text) !important; }
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; opacity: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  label.btn:has(input:focus-visible), #send-zone:has(~ * input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* clipboard HUD rises from the dock instead of covering the status island */
+  #clipboard-hud { top: auto; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 64px); transform: translate3d(-50%, 16px, 0) scale(0.98); transition: transform 240ms var(--ease-sheet), opacity 200ms var(--ease-out); }
+  #clipboard-hud:not(.show) { transition-duration: 160ms, 140ms; }
+  #clipboard-hud.show { transform: translate3d(-50%, 0, 0) scale(1); }
+  html body.og-mobile-mode #clipboard-hud { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 96px); }
+  html body.og-mobile-mode .dynamic-island { justify-content: flex-start; padding: 0 12px 0 7px; gap: 10px; height: 36px; }
+  html[data-role="laptop"] body.og-mobile-mode .top-row { flex-direction: row; align-items: center; }
+  html[data-role="laptop"] body.og-mobile-mode .dynamic-island { width: auto; flex: 1 1 auto; }
+  html[data-role="phone"] body.og-mobile-mode .token-pill { margin-left: auto; }
+  html body .og-pill-btn.camera-pill, html body .og-pill-btn.scan-pill { background: transparent; border-color: transparent; }
+
+  /* buttons */
+  .toolbar { gap: 8px; flex-wrap: nowrap; flex: none; }
+  .btn {
+    height: 36px; padding: 0 16px; border-radius: var(--r-full); font: 500 var(--fs-sm)/1 var(--font); letter-spacing: -0.01em;
+    background: var(--n2); border: 1px solid var(--line); box-shadow: none; color: var(--text); gap: 8px;
+    transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+  }
+  .btn .svg-ic { width: 15px; height: 15px; }
+  .btn:active { transform: scale(0.97); }
+  .btn.primary { background: var(--accent-fill); border-color: transparent; box-shadow: 0 6px 20px rgba(0, 113, 227, 0.28); color: #fff; }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--text-2); }
+  @media (hover: hover) and (pointer: fine) {
+    .btn:hover { background: var(--n3); border-color: var(--line-hi); }
+    /* fill stays #0071e3 (4.7:1 with white); lighter blues drop below 4.5:1, so hover shows as a soft halo */
+    .btn.primary:hover { background: var(--accent-fill); box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.28), 0 8px 24px rgba(0, 113, 227, 0.4); }
+    .btn.ghost:hover { background: rgba(255, 255, 255, 0.06); border-color: transparent; color: var(--text); }
+  }
+  @media (pointer: coarse) { .btn { height: 44px; } }
+  .kbd, kbd.kbd { font-size: var(--fs-xs); color: var(--text-3); background: rgba(255, 255, 255, 0.06); border: 0; border-radius: 6px; padding: 3px 6px; }
+  .btn.primary .kbd { color: rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.16); }
+
+  /* insecure banner: native, quiet, still amber */
+  #insecure-banner {
+    width: min(560px, 100%); margin-top: 12px; padding: 10px 10px 10px 14px; align-items: center; gap: 12px;
+    background: #241d10; border: 1px solid rgba(255, 179, 64, 0.28); border-radius: var(--r-md);
+    font-size: var(--fs-sm); line-height: 1.4; color: var(--text-2);
+  }
+  #insecure-banner strong { color: var(--warning); font-weight: 600; }
+  #insecure-banner button {
+    min-width: 44px; height: 32px; padding: 0 12px; border-radius: var(--r-full); border: 0;
+    background: rgba(255, 255, 255, 0.08); color: var(--text); font: 500 var(--fs-sm)/1 var(--font);
+  }
+  @media (pointer: coarse) { #insecure-banner button { height: 44px; } }
+
+  /* pairing sheet: anchored under its button, leaves the way it came */
+  #qr-modal { align-self: flex-end; margin: 12px 0 auto auto; width: min(380px, 100%); transform-origin: top right;
+    transition: transform 240ms var(--ease-sheet), opacity 200ms var(--ease-out); }
+  #qr-modal.collapsed { opacity: 0; filter: none; transform: translate3d(0, -8px, 0) scale(0.97); transition-duration: 160ms, 140ms; }
+  .qr-glass {
+    flex-direction: column; align-items: stretch; gap: 16px; max-width: none; padding: 20px;
+    background: var(--material); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  }
+  .qr-frame { width: 184px; height: 184px; padding: 12px; margin: 0 auto; border-radius: var(--r-md); background: #fff; border: 0; }
+  .qr-copy { text-align: center; min-width: 0; }
+  .qr-copy h2 { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .qr-copy p { font-size: var(--fs-sm); color: var(--text-2); margin: 0 0 14px; line-height: 1.45; }
+  .qr-endpoints-nav { justify-content: center; margin: 0 0 10px; padding: 3px; border-radius: var(--r-full); background: rgba(255, 255, 255, 0.06); border: 0; display: inline-flex; }
+  .qr-endpoint-pill { height: 30px; padding: 0 12px; border-radius: var(--r-full); font-size: var(--fs-sm); color: var(--text-2); border: 0;
+    transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out); }
+  .qr-endpoint-pill.active { background: var(--n3); color: var(--text); border: 0; box-shadow: none; }
+  @media (hover: hover) and (pointer: fine) { .qr-endpoint-pill:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); } }
+  .url-chip { display: block; width: 100%; box-sizing: border-box; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-2);
+    background: rgba(0, 0, 0, 0.28); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 10px; word-break: break-all; text-align: left;
+    transition: border-color 160ms var(--ease-out); }
+  @media (hover: hover) and (pointer: fine) { .url-chip:hover { background: rgba(0, 0, 0, 0.28); border-color: var(--line-hi); } }
+  .qr-link { margin-top: 6px; min-height: 44px; width: 100%; border: 0; background: none; color: var(--accent-hi); font: 500 var(--fs-sm)/1 var(--font); cursor: pointer; border-radius: var(--r-sm); }
+  @media (hover: hover) and (pointer: fine) { .qr-link:hover { color: #fff; } }
+
+  /* dock */
+  .bottom-dock { display: flex; justify-content: center; }
+  .dock-bar { display: inline-flex; gap: 4px; padding: 4px; background: var(--material); border: 1px solid var(--line); border-radius: var(--r-full); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); }
+  .dock-bar .btn { border-color: transparent; }
+
+  /* cards and the flick hint */
+  .card-hint-pill { animation: none; background: var(--n2); border: 1px solid var(--line); color: var(--text-2); font: 500 var(--fs-xs)/1 var(--font); padding: 6px 10px; box-shadow: none; }
+  .file-card { border-radius: var(--r-lg); }
+
+  /* paired edge glow: tells people where to flick */
+  .bezel-strip { border-color: rgba(10, 132, 255, 0.55); box-shadow: 0 0 48px 8px rgba(10, 132, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+  .bezel-strip .strip-label { font: 500 var(--fs-xs)/1 var(--font); }
+
+  /* phone send zone */
+  #phone-home { display: none; }
+  html[data-role="phone"] #phone-home {
+    position: fixed; left: 16px; right: 16px; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 88px);
+    display: flex; flex-direction: column; gap: 12px; max-width: 480px; margin: 0 auto;
+  }
+  #recent h2 { font-size: var(--fs-xs); font-weight: 500; color: var(--text-2); margin: 0 0 4px 4px; letter-spacing: 0; }
+  #recent-list { list-style: none; margin: 0; padding: 0; max-height: 132px; overflow-y: auto; border-radius: var(--r-md); }
+  .recent-empty { font-size: var(--fs-sm); color: var(--text-2); padding: 10px 4px; }
+  .recent-row { display: flex; width: 100%; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px;
+    background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--text); font: 400 var(--fs-sm)/1.2 var(--font); text-align: left; cursor: pointer; }
+  .recent-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent-meta { flex: none; font-size: var(--fs-xs); color: var(--text-2); }
+  .recent-row:active { background: rgba(255, 255, 255, 0.04); }
+  html[data-role="phone"] #send-zone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 112px;
+    border-radius: var(--r-lg); background: var(--n1); border: 1px solid var(--line);
+    cursor: pointer; transition: transform 160ms var(--ease-out), border-color 160ms var(--ease-out);
+  }
+  html[data-role="phone"] #send-zone:active { transform: scale(0.98); }
+  html[data-role="phone"] #send-zone.is-over { border-color: var(--accent); background: #10233a; }
+  .send-zone-icon { width: 40px; height: 40px; border-radius: var(--r-full); background: var(--accent-fill); color: #fff; display: inline-flex; align-items: center; justify-content: center; }
+  .send-zone-icon .svg-ic { width: 20px; height: 20px; }
+  .send-zone-title { font-size: var(--fs-md); font-weight: 600; letter-spacing: -0.012em; }
+  .send-zone-sub { font-size: var(--fs-sm); color: var(--text-2); }
+  html[data-role="phone"] #top-toolbar { display: none; }
+
+  /* unpaired phone */
+  #unpaired-screen { position: fixed; inset: 0; z-index: 400; background: var(--n0); display: flex; align-items: center; justify-content: center; padding: 24px; }
+  #unpaired-screen[hidden] { display: none; }
+  .unpaired-card { max-width: 340px; text-align: center; }
+  .unpaired-mark { width: 56px; height: 56px; margin: 0 auto 20px; border-radius: var(--r-full); background: var(--n2); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; color: var(--text); }
+  .unpaired-mark .svg-ic { width: 24px; height: 24px; }
+  .unpaired-card h1 { font-size: var(--fs-xl); font-weight: 600; letter-spacing: -0.025em; margin: 0 0 10px; }
+  .unpaired-card p { font-size: var(--fs-md); line-height: 1.45; color: var(--text-2); margin: 0 0 8px; }
+  .unpaired-card .unpaired-hint { font-size: var(--fs-sm); color: var(--text-2); }
+
+  /* toast */
+  #toast { font: 500 var(--fs-sm)/1.3 var(--font); background: var(--n2); border: 1px solid var(--line); border-radius: var(--r-full); color: var(--text); }
+
+  /* command palette opens instantly (keyboard action) */
+  .cmd-dialog { background: var(--material); border: 1px solid var(--line); border-radius: var(--r-md); }
+  .cmd-palette-backdrop, .cmd-dialog { transition: none !important; animation: none !important; }
+  .cmd-input { font: 400 var(--fs-md)/1.2 var(--font); }
+  .cmd-item { font-size: var(--fs-sm); border-radius: var(--r-sm); }
+  .cmd-cat { font-size: var(--fs-xs); color: var(--text-3); }
+
+  /* module surfaces (higher specificity beats their injected styles) */
+  html body #continuity-clipboard-banner { background: var(--n2); border: 1px solid var(--line); border-radius: var(--r-md); font-family: var(--font); }
+  html body .og-tool-badge { display: none; }
+  html[data-role="phone"] body #continuity-clipboard-banner { left: 16px; right: 16px; width: auto; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 88px); }
+  html body .og-thumb-dock { background: var(--material); border-radius: var(--r-lg); }
+  html body .og-pill-btn { min-height: 56px; border-color: transparent; background: transparent; box-shadow: none; border-radius: var(--r-md); }
+  html body .og-pill-btn .og-lbl { font: 500 var(--fs-xs)/1 var(--font); letter-spacing: 0; }
+  html body .og-pill-btn[hidden], html body .og-thumb-subbar[hidden] { display: none !important; }
+
+  .qr-frame svg { filter: invert(1); }
+  #og-edge-badge { display: none !important; }
+  html body .file-card .chip-btn { font: 500 var(--fs-xs)/1 var(--font); border-radius: var(--r-full); }
+  html body .file-card .reveal-btn { color: var(--text-2); background: var(--n2); border-color: var(--line); }
+  @media (prefers-reduced-motion: reduce) {
+    #qr-modal, #qr-modal.collapsed { transform: none !important; transition: opacity 160ms linear; }
+    .btn, #send-zone { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="gl-canvas"></canvas>
+<div id="strips-layer"></div>
+<div id="phone-top-portal"></div>
+<div id="toast">NameDrop Synced</div>
+<div id="clipboard-hud" class="clipboard-hud" role="status" aria-live="polite">
+  <div class="clipboard-hud-pill">
+    <span class="hud-pill-pulse"></span>
+    <span class="hud-pill-text" id="hud-pill-text">Copied. Press <strong>⌘V</strong> to paste anywhere. <span class="hud-pill-loc">Saved to ~/Downloads/OneGlass</span></span>
+    <button type="button" class="hud-reveal-btn" id="hud-reveal-btn" title="Reveal in Finder / Explorer">
+      <svg class="svg-ic" style="width:12px;height:12px" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span>Show in Finder</span>
+    </button>
+    <button type="button" class="hud-close-btn" id="hud-close-btn" aria-label="Dismiss">
+      <svg class="svg-ic" style="width:12px;height:12px" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- 1-Tap OS Share Sheet Setup Modal -->
+<div id="sharesheet-setup-modal" class="sharesheet-modal-backdrop" onclick="if(event.target===this)closeShareSheetSetupModal()">
+  <div class="sharesheet-card">
+    <div class="sharesheet-head">
+      <div class="sharesheet-title-wrap">
+        <svg class="svg-ic" style="color:var(--emerald);width:18px;height:18px" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        <h3>1-Tap OS Share Sheet</h3>
+      </div>
+      <button type="button" class="sharesheet-close-btn" onclick="closeShareSheetSetupModal()" title="Close">
+        <svg class="svg-ic" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <p class="sharesheet-sub">Beam photos & files from your phone's native Gallery or Files directly to your computer's clipboard (⌘V / Ctrl+V).</p>
+
+    <div class="sharesheet-sections">
+      <!-- Android Section -->
+      <div class="sharesheet-section-card">
+        <div class="sharesheet-section-badge android-badge">
+          <svg class="svg-ic" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+          <span>Android</span>
+        </div>
+        <p class="sharesheet-text">
+          Tap <strong>Add to Home Screen</strong>. OneGlass then shows up in the Android share menu in Photos and Files.
+        </p>
+      </div>
+
+      <!-- iOS Section -->
+      <div class="sharesheet-section-card">
+        <div class="sharesheet-section-badge ios-badge">
+          <svg class="svg-ic" style="width:13px;height:13px" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/></svg>
+          <span>iPhone / iPad</span>
+        </div>
+        <p class="sharesheet-text">
+          Use our 1-tap Share URL (<code>POST /api/beam</code>) in iOS Shortcuts or Action Button to beam photos straight from iOS Photos to your PC's clipboard (⌘V / Ctrl+V).
+        </p>
+        <div class="sharesheet-beam-row">
+          <div class="sharesheet-beam-url" id="beam-endpoint-url-display">...</div>
+          <button type="button" class="btn primary copy-beam-btn" id="copy-beam-url-btn" onclick="copyBeamEndpointUrl()">
+            <svg class="svg-ic" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copy Beam Endpoint URL</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="cards-layer"></div>
+
+<!-- Linear Command Palette (`⌘K`) -->
+<div id="cmd-backdrop" class="cmd-palette-backdrop" onclick="if(event.target===this)closeCommandPalette()">
+  <div class="cmd-dialog">
+    <div class="cmd-input-row">
+      <svg class="svg-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="cmd-input" class="cmd-input" type="text" placeholder="Search actions" autocomplete="off">
+      <kbd class="kbd">ESC</kbd>
+    </div>
+    <div id="cmd-list" class="cmd-list" tabindex="0" role="region" aria-label="Actions"></div>
+  </div>
+</div>
+
+<section id="unpaired-screen" role="dialog" aria-labelledby="unpaired-title" hidden>
+  <div class="unpaired-card">
+    <div class="unpaired-mark" aria-hidden="true">
+      <svg class="svg-ic" viewBox="0 0 24 24"><rect x="3" y="4" width="11" height="16" rx="2"/><rect x="14" y="7" width="7" height="13" rx="1.5"/></svg>
+    </div>
+    <h1 id="unpaired-title">Not paired yet</h1>
+    <p>Scan the QR code on your laptop to connect.</p>
+    <p class="unpaired-hint">On the laptop, open OneGlass and choose Pair a phone.</p>
+  </div>
+</section>
+
+<div id="ui-shell">
+  <div class="top-row interactive">
+    <div class="status-rail dynamic-island" id="og-status-island">
+      <span class="brand-mark">
+        <svg class="svg-ic" style="width:12px;height:12px" viewBox="0 0 24 24"><rect x="3" y="4" width="11" height="16" rx="2"/><rect x="14" y="7" width="7" height="13" rx="1.5"/></svg>
+      </span>
+      <span class="island-title">OneGlass</span>
+      <span class="sep-v"></span>
+      <span id="peer-dot" class="island-dot"></span>
+      <span id="peer-label" class="island-sub">No phone yet</span>
+      <span id="og-edge-badge" class="edge-badge" style="display:none">EDGE: RIGHT</span>
+      <div class="token-pill is-pending" id="token-pill" role="status" title="Checking session">
+        <svg class="svg-ic" style="width:11px;height:11px" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path id="token-pill-shackle" d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span id="token-pill-label">Checking session</span>
+      </div>
+      <div class="seismic-pill" title="Typing-Proof 200Hz AppleSPU Bezel-Tap Sensor">
+        <span id="spu-label">SPU 200Hz</span>
+        <span class="seismic-bars" id="seismic-bars">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </span>
+      </div>
+    </div>
+
+    <div class="toolbar" id="top-toolbar">
+            <button id="qr-toggle-btn" class="btn primary" aria-controls="qr-modal" onclick="toggleQrModal()">
+        <svg class="svg-ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM18 14h3M14 18v3"/></svg>
+        <span>Pair a phone</span>
+      </button>
+      <button id="motion-btn" class="btn accent" style="display:none" onclick="enablePhoneMotion()">
+        <svg class="svg-ic" viewBox="0 0 24 24"><path d="M2 12h4l3-9 4 18 3-9h6"/></svg>
+        <span>Tap Sensor</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="insecure-banner" class="interactive" role="status" hidden>
+    <p><strong>Unencrypted connection.</strong> Files still send. Camera, clipboard and screen sharing are off over plain HTTP.</p>
+    <button type="button" id="insecure-banner-dismiss" title="Hide this notice">OK</button>
+  </div>
+
+  <div id="qr-modal" class="interactive">
+    <div class="qr-glass">
+      <div class="qr-frame" id="qr-svg-box"></div>
+      <div class="qr-copy">
+        <h2>Pair your phone</h2>
+        <p>Point your phone camera at the code. Both devices need to be on the same Wi-Fi.</p>
+        <div id="qr-endpoints-pills" class="qr-endpoints-nav"></div>
+        <div class="url-chip" id="phone-url-text" onclick="copyPhoneUrl()" title="Click to copy the link">Getting the link…</div>
+        <button type="button" class="qr-link" id="qr-sharesheet-btn" onclick="openShareSheetSetupModal()">Send from the phone share sheet</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="phone-home" class="interactive">
+  <label id="send-zone" for="file-input">
+    <span class="send-zone-icon" aria-hidden="true">
+      <svg class="svg-ic" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    </span>
+    <span class="send-zone-title">Send to laptop</span>
+    <span class="send-zone-sub">Tap to pick files, or flick a card up</span>
+  </label>
+  <section id="recent" aria-labelledby="recent-title">
+    <h2 id="recent-title">Recent</h2>
+    <ul id="recent-list"><li class="recent-empty">Nothing sent yet</li></ul>
+  </section>
+  </div>
+
+  <div class="bottom-dock interactive" id="main-bottom-dock">
+    <div class="dock-bar">
+      <label class="btn primary" style="cursor:pointer">
+        <svg class="svg-ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Add file</span>
+        <input id="file-input" class="sr-only" type="file" multiple accept="*/*" aria-label="Add file" onchange="handleFilesSelected(this.files)">
+      </label>
+      <button class="btn ghost cmdk-hint" onclick="openCommandPalette()" title="All tools (Command K)">
+        <span>All tools</span>
+        <kbd class="kbd">⌘K</kbd>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+const params = new URLSearchParams(location.search);
+const isMobileUA = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const ROLE = params.get('role') || (isMobileUA ? 'phone' : 'laptop');
+document.documentElement.dataset.role = ROLE;
+const PX_PER_MM = ROLE === 'phone' ? Math.min(3.6, (window.innerWidth * 0.72) / 68) : 3.6;
+const CARD_W_MM = 68;
+const CARD_H_MM = 64;
+
+let ws = null;
+let selfId = null;
+let connectedPeers = [];
+let sharedItemsHistory = [];
+const seismicHistory = new Array(10).fill(0.15);
+
+// Global State Bridges
+window.sharedItemsHistory = sharedItemsHistory;
+window.oneGlassNativeActive = false;
+
+window.sendOneGlassFast = (payload) => {
+  if (window.oneGlassP2P && typeof window.oneGlassP2P.sendP2P === 'function' && window.oneGlassP2P.isConnected && window.oneGlassP2P.isConnected()) {
+    return window.oneGlassP2P.sendP2P(payload, 'fast-telemetry');
+  }
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify(payload));
+    return true;
+  }
+  return false;
+};
+
+window.sendOneGlassP2P = (msgObj, channelName = 'reliable-continuity') => {
+  if (window.oneGlassP2P && typeof window.oneGlassP2P.sendP2P === 'function' && window.oneGlassP2P.isConnected && window.oneGlassP2P.isConnected()) {
+    const ok = window.oneGlassP2P.sendP2P(msgObj, channelName);
+    if (ok) return true;
+  }
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify(msgObj));
+    return true;
+  }
+  return false;
+};
+
+function updateActiveEdgeBadge() {
+  const badge = document.getElementById('og-edge-badge');
+  if (!badge) return;
+  if (ROLE === 'phone') {
+    const me = connectedPeers.find((p) => p.id === selfId);
+    if (me && me.edge) {
+      badge.textContent = `EDGE: ${me.edge.toUpperCase()}`;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+    return;
+  }
+  const phones = connectedPeers.filter((p) => p.id !== selfId && p.role === 'phone');
+  if (phones.length > 0) {
+    const edges = Array.from(new Set(phones.map((p) => (p.edge || 'right').toUpperCase()))).join(', ');
+    badge.textContent = `EDGE: ${edges}`;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+let continuityMod = null;
+let mobileMod = null;
+let displayMod = null;
+let screenPortalMod = null;
+let cameraScannerMod = null;
+let webrtcMod = null;
+
+const reducedMotionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+function prefersReducedMotion() { return !!reducedMotionQuery?.matches; }
+function appleProject(initialVelocityPxPerMs, decelerationRate = 0.992) {
+  return initialVelocityPxPerMs * decelerationRate / (1 - decelerationRate);
+}
+
+function appleRubberband(overshoot, dimension, constant = 0.55) {
+  if (overshoot === 0) return 0;
+  const sign = overshoot < 0 ? -1 : 1;
+  const abs = Math.abs(overshoot);
+  return sign * (abs * dimension * constant) / (dimension + constant * abs);
+}
+
+if (ROLE === 'phone') {
+  document.getElementById('qr-modal').classList.add('collapsed');
+  document.getElementById('qr-toggle-btn').style.display = 'none';
+  document.getElementById('phone-top-portal').style.display = 'block';
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    document.getElementById('motion-btn').style.display = 'inline-flex';
+  } else {
+    startPhoneAccelerometer();
+  }
+}
+
+window.toggleQrModal = function toggleQrModal() {
+  document.getElementById('qr-modal').classList.toggle('collapsed');
+};
+
+// ============================================================================
+// Linear Command Palette (`⌘K`)
+// ============================================================================
+const COMMANDS = [
+  { id: 'add-file', title: 'Add a file', cat: 'Send', key: 'O', run: () => document.getElementById('file-input').click() },
+  { id: 'paste', title: 'Paste as a card', cat: 'Phone', key: '⌘V', run: () => window.pasteFromClipboard() },
+  { id: 'split', title: 'Phones side by side', cat: 'Layout', key: 'S', run: () => window.oneGlassPresets?.('side-by-side') },
+  { id: 'broadcast', title: 'Send to every phone at once', cat: 'Layout', key: 'B', run: () => window.oneGlassPresets?.('overlap-all') },
+  { id: 'surround', title: 'Phones around all four edges', cat: 'Layout', key: 'U', run: () => window.oneGlassPresets?.('surround') },
+  { id: 'wall', title: 'Panorama across screens', cat: 'Screens', key: 'W', run: () => window.oneGlassDisplayModes?.openPanoramicWall?.() },
+  { id: 'tele', title: 'Teleprompter', cat: 'Screens', key: 'T', run: () => window.oneGlassDisplayModes?.openNotchTeleprompter?.() },
+  { id: 'synth', title: 'Synth across screens', cat: 'Screens', key: 'M', run: () => window.oneGlassDisplayModes?.openContinuumSynth?.() },
+  { id: 'portal', title: 'Show a window on the phone', cat: 'Screens', key: 'P', run: () => window.oneGlassScreenPortal?.openScreenPortal?.() },
+  { id: 'scanner', title: 'Scan a document with the phone', cat: 'Phone', key: 'D', run: () => window.oneGlassCameraScanner?.openCameraScanner?.() },
+  { id: 'p2p', title: 'Connection details', cat: 'Connection', key: 'I', run: () => window.oneGlassWebRTC?.openP2PInspector?.() },
+  { id: 'canvas', title: 'Sketch across screens', cat: 'Screens', key: 'C', run: () => window.spawnSpanningCanvasCard() },
+  { id: 'namedrop', title: 'Wave to nearby phones', cat: 'Phone', key: 'N', run: () => window.triggerManualNameDrop() },
+  { id: 'history', title: 'Transfer history', cat: 'Phone', key: 'H', run: () => window.oneGlassHistory?.() },
+  { id: 'qr', title: 'Pair a phone', cat: 'Connection', key: 'Q', run: () => window.toggleQrModal() },
+  { id: 'sharesheet', title: 'Send from the phone share sheet', cat: 'Phone', key: '', run: () => window.openShareSheetSetupModal?.() },
+  { id: 'reveal-downloads', title: 'Open the received files folder', cat: 'Send', key: 'F', run: () => {
+    fetch('/api/reveal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: '' }) })
+      .then((res) => showToast(res.ok ? 'Opening ~/Downloads/OneGlass' : 'Could not open the folder. Files are in ~/Downloads/OneGlass'))
+      .catch(() => showToast('Could not open the folder. Files are in ~/Downloads/OneGlass'));
+  }},
+];
+
+let cmdSelectedIdx = 0;
+let filteredCmds = [...COMMANDS];
+
+function renderCommandList() {
+  const listEl = document.getElementById('cmd-list');
+  listEl.innerHTML = filteredCmds
+    .map(
+      (c, i) => `
+      <div class="cmd-item ${i === cmdSelectedIdx ? 'selected' : ''}" data-idx="${i}">
+        <div class="cmd-item-left">
+          <span>${c.title}</span>
+          <span class="cmd-cat">${c.cat}</span>
+        </div>
+        ${c.key ? `<kbd class="kbd">${c.key}</kbd>` : ''}
+      </div>`,
+    )
+    .join('');
+  listEl.querySelectorAll('.cmd-item').forEach((el) => {
+    el.addEventListener('click', () => {
+      const idx = +el.getAttribute('data-idx');
+      const cmd = filteredCmds[idx];
+      closeCommandPalette();
+      cmd?.run();
+    });
+  });
+}
+
+window.openCommandPalette = function openCommandPalette() {
+  const bd = document.getElementById('cmd-backdrop');
+  const inp = document.getElementById('cmd-input');
+  bd.classList.add('open');
+  inp.value = '';
+  filteredCmds = [...COMMANDS];
+  cmdSelectedIdx = 0;
+  renderCommandList();
+  setTimeout(() => inp.focus(), 20);
+};
+
+window.closeCommandPalette = function closeCommandPalette() {
+  document.getElementById('cmd-backdrop').classList.remove('open');
+};
+
+document.getElementById('cmd-input').addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase().trim();
+  filteredCmds = COMMANDS.filter((c) => c.title.toLowerCase().includes(q) || c.cat.toLowerCase().includes(q));
+  cmdSelectedIdx = 0;
+  renderCommandList();
+});
+
+window.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    const bd = document.getElementById('cmd-backdrop');
+    if (bd.classList.contains('open')) closeCommandPalette();
+    else openCommandPalette();
+    return;
+  }
+  const bd = document.getElementById('cmd-backdrop');
+  if (bd && bd.classList.contains('open')) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeCommandPalette();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      cmdSelectedIdx = (cmdSelectedIdx + 1) % Math.max(1, filteredCmds.length);
+      renderCommandList();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      cmdSelectedIdx = (cmdSelectedIdx - 1 + Math.max(1, filteredCmds.length)) % Math.max(1, filteredCmds.length);
+      renderCommandList();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const cmd = filteredCmds[cmdSelectedIdx];
+      closeCommandPalette();
+      cmd?.run();
+    }
+    return;
+  }
+
+  const activeEl = document.activeElement;
+  const isInputFocused =
+    activeEl &&
+    (activeEl.tagName === 'INPUT' ||
+      activeEl.tagName === 'TEXTAREA' ||
+      activeEl.isContentEditable ||
+      activeEl.getAttribute?.('contenteditable') === 'true');
+
+  if (!isInputFocused && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    const k = e.key.toLowerCase();
+    const hotkeyMap = {
+      w: () => COMMANDS.find((c) => c.id === 'wall')?.run(),
+      t: () => COMMANDS.find((c) => c.id === 'tele')?.run(),
+      p: () => COMMANDS.find((c) => c.id === 'portal')?.run(),
+      d: () => COMMANDS.find((c) => c.id === 'scanner')?.run(),
+      i: () => COMMANDS.find((c) => c.id === 'p2p')?.run(),
+      s: () => COMMANDS.find((c) => c.id === 'split')?.run(),
+      b: () => COMMANDS.find((c) => c.id === 'broadcast')?.run(),
+      c: () => (window.spawnSpanningCanvasCard ? window.spawnSpanningCanvasCard() : COMMANDS.find((c) => c.id === 'canvas')?.run()),
+      h: () => (window.oneGlassHistory ? window.oneGlassHistory() : COMMANDS.find((c) => c.id === 'history')?.run()),
+    };
+    if (hotkeyMap[k]) {
+      e.preventDefault();
+      hotkeyMap[k]();
+      return;
+    }
+  }
+});
+
+function updateSeismicUI(jerk, thresh, typing) {
+  const spuLabel = document.getElementById('spu-label');
+  if (spuLabel) spuLabel.textContent = typing ? 'SPU GUARD' : 'SPU 200Hz';
+  const norm = typing ? 0.08 : Math.min(1.0, (jerk / Math.max(0.015, thresh)) * 0.9);
+  seismicHistory.shift();
+  seismicHistory.push(Math.max(0.14, norm));
+  const bars = document.querySelectorAll('#seismic-bars i');
+  bars.forEach((b, idx) => {
+    const v = seismicHistory[idx] || 0.14;
+    b.style.transform = `scaleY(${v.toFixed(2)})`;
+    b.style.backgroundColor = typing ? '#525866' : v > 0.78 ? '#f59e0b' : '#2cc990';
+  });
+}
+
+let availableEndpoints = [];
+let selectedEndpointId = 'lan';
+
+function renderEndpointPills(endpoints) {
+  if (!endpoints || !endpoints.length) return;
+  availableEndpoints = endpoints;
+  const container = document.getElementById('qr-endpoints-pills');
+  if (!container) return;
+
+  container.innerHTML = endpoints.map((ep) => {
+    const isActive = ep.id === selectedEndpointId || (selectedEndpointId === 'lan' && ep.id === 'lan');
+    return `
+      <button type="button" class="qr-endpoint-pill ${isActive ? 'active' : ''}" data-ep-id="${escapeHtml(ep.id)}" onclick="selectQrEndpoint('${escapeHtml(ep.id)}')">
+        <span class="pill-dot"></span>
+        <span>${escapeHtml(ep.label)}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+window.selectQrEndpoint = function selectQrEndpoint(id) {
+  selectedEndpointId = id;
+  const ep = availableEndpoints.find((e) => e.id === id) || availableEndpoints[0];
+  if (!ep) return;
+
+  const pills = document.querySelectorAll('.qr-endpoint-pill');
+  pills.forEach((p) => p.classList.toggle('active', p.getAttribute('data-ep-id') === id));
+
+  const phoneUrlEl = document.getElementById('phone-url-text');
+  if (phoneUrlEl) {
+    phoneUrlEl.textContent = ep.url;
+  }
+
+  const qrBox = document.getElementById('qr-svg-box');
+  if (qrBox && ep.url) {
+    qrBox.dataset.token = window.sessionToken || '';
+    fetch(`/api/qr?text=${encodeURIComponent(ep.url)}`)
+      .then((r) => r.text())
+      .then((svg) => {
+        if (svg && svg.startsWith('<svg')) {
+          qrBox.innerHTML = svg;
+        }
+      })
+      .catch(() => {});
+  }
+};
+
+window.copyPhoneUrl = function copyPhoneUrl() {
+  const el = document.getElementById('phone-url-text');
+  if (!el || !el.textContent) return;
+  const text = el.textContent.trim();
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(() => showToast('Pairing URL Copied to Clipboard')).catch(() => {});
+  } else {
+    showToast('Pairing URL Copied');
+  }
+};
+window.getBeamEndpointUrl = function getBeamEndpointUrl() {
+  const origin = window.location.origin;
+  const token = window.sessionToken;
+  return `${origin}/api/beam${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+};
+
+window.copyBeamEndpointUrl = function copyBeamEndpointUrl() {
+  const url = window.getBeamEndpointUrl();
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => showToast('Copied Beam Endpoint URL!'))
+      .catch(() => showToast(url));
+  } else {
+    showToast(url);
+  }
+};
+
+window.openShareSheetSetupModal = function openShareSheetSetupModal() {
+  const modal = document.getElementById('sharesheet-setup-modal');
+  if (modal) {
+    const displayEl = document.getElementById('beam-endpoint-url-display');
+    if (displayEl) {
+      displayEl.textContent = window.getBeamEndpointUrl();
+    }
+    modal.classList.add('open');
+  }
+};
+
+window.closeShareSheetSetupModal = function closeShareSheetSetupModal() {
+  const modal = document.getElementById('sharesheet-setup-modal');
+  if (modal) {
+    modal.classList.remove('open');
+  }
+};
+
+fetch('/api/info')
+  .then((r) => r.json())
+  .then((info) => {
+    document.getElementById('qr-svg-box').innerHTML = info.qrSvg || '';
+    document.getElementById('phone-url-text').textContent = info.phoneUrl || '';
+    if (info.endpoints) {
+      renderEndpointPills(info.endpoints);
+    }
+    if (info.sharedItems) {
+      sharedItemsHistory = info.sharedItems;
+      window.sharedItemsHistory = sharedItemsHistory;
+    }
+  })
+  .catch(() => {});
+
+// ============================================================================
+// Draggable Multi-Device Bezel Strips
+// ============================================================================
+const stripsLayer = document.getElementById('strips-layer');
+const stripElements = new Map();
+
+function renderBezelStrips() {
+  if (ROLE !== 'laptop') return;
+  const phones = connectedPeers.filter((p) => p.id !== selfId && p.role === 'phone');
+  const activeIds = new Set(phones.map((p) => p.id));
+
+  for (const [id, el] of stripElements.entries()) {
+    if (!activeIds.has(id)) {
+      el.remove();
+      stripElements.delete(id);
+    }
+  }
+
+  // Only render bezel strips for actually connected phones (no permanent strip when idle!)
+  const listToRender = phones;
+
+  for (const p of listToRender) {
+    let el = stripElements.get(p.id);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'bezel-strip';
+      el.innerHTML = `<div class="strip-label"><i class="strip-dot"></i><span class="sname"></span><span class="strip-coord"></span></div>`;
+      stripElements.set(p.id, el);
+      stripsLayer.appendChild(el);
+      bindStripDrag(el, p.id);
+    }
+    el.style.setProperty('--strip-color', p.color || '#5e6ad2');
+    el.querySelector('.sname').textContent = p.name;
+    el.querySelector('.strip-coord').textContent = `${(p.edge || 'R')[0].toUpperCase()}·${Math.round((p.centerRatio ?? 0.5) * 100)}%`;
+    positionStripElement(el, p.edge || 'right', p.centerRatio ?? 0.5, p.spanRatio ?? 0.28);
+  }
+  updateActiveEdgeBadge();
+}
+
+function positionStripElement(el, edge, centerRatio, spanRatio) {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  el.className = `bezel-strip edge-${edge}`;
+  const thickness = 22;
+
+  if (edge === 'top' || edge === 'bottom') {
+    const sw = Math.max(120, Math.round(W * spanRatio));
+    const left = Math.round(Math.max(12, Math.min(W - sw - 12, centerRatio * W - sw / 2)));
+    el.style.width = `${sw}px`;
+    el.style.height = `${thickness}px`;
+    el.style.left = `${left}px`;
+    el.style.top = edge === 'top' ? '4px' : `${H - thickness - 4}px`;
+  } else {
+    const sh = Math.max(120, Math.round(H * spanRatio));
+    const top = Math.round(Math.max(12, Math.min(H - sh - 12, centerRatio * H - sh / 2)));
+    el.style.width = `${thickness}px`;
+    el.style.height = `${sh}px`;
+    el.style.top = `${top}px`;
+    el.style.left = edge === 'left' ? '4px' : `${W - thickness - 4}px`;
+  }
+}
+
+function bindStripDrag(el, peerId) {
+  let dragging = false;
+  el.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    dragging = true;
+    el.setPointerCapture(e.pointerId);
+  });
+
+  el.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const x = e.clientX;
+    const y = e.clientY;
+    const minDist = Math.min(y, H - y, x, W - x);
+
+    let edge = 'right';
+    let centerRatio = 0.5;
+    if (minDist === y) { edge = 'top'; centerRatio = x / W; }
+    else if (minDist === H - y) { edge = 'bottom'; centerRatio = x / W; }
+    else if (minDist === x) { edge = 'left'; centerRatio = y / H; }
+    else { edge = 'right'; centerRatio = y / H; }
+
+    centerRatio = Math.max(0.12, Math.min(0.88, centerRatio));
+    positionStripElement(el, edge, centerRatio, 0.28);
+    const coordEl = el.querySelector('.strip-coord');
+    if (coordEl) coordEl.textContent = `${edge[0].toUpperCase()}·${Math.round(centerRatio * 100)}%`;
+
+    const peer = connectedPeers.find((p) => p.id === peerId);
+    if (peer) {
+      peer.edge = edge;
+      peer.centerRatio = centerRatio;
+      updateActiveEdgeBadge();
+    }
+    if (ws && ws.readyState === 1 && peerId !== '__preview__') {
+      ws.send(JSON.stringify({ type: 'update_strip', peerId, edge, centerRatio }));
+    }
+  });
+
+  const end = () => { dragging = false; };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+}
+
+window.addEventListener('resize', renderBezelStrips);
+
+// ============================================================================
+// WebSocket Sync
+// ============================================================================
+let prevCounterpartCount = 0;
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const searchParams = new URLSearchParams(location.search);
+  const currentToken = searchParams.get('token') || window.sessionToken || '';
+  const search = location.search ? location.search : (currentToken ? `?token=${encodeURIComponent(currentToken)}` : '');
+  ws = new WebSocket(`${proto}//${location.host}${search}`);
+
+  ws.onopen = () => {
+    ws.send(
+      JSON.stringify({
+        type: 'hello',
+        role: ROLE,
+        token: currentToken,
+        widthPx: window.innerWidth,
+        heightPx: window.innerHeight,
+        dpr: window.devicePixelRatio || 2,
+      }),
+    );
+  };
+
+  ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === 'welcome') {
+      selfId = msg.selfId;
+      updateSessionBadge(Boolean(msg.authenticated));
+      if (msg.sessionToken) {
+        window.sessionToken = msg.sessionToken;
+        const pairUrl = msg.pairUrl || (msg.phoneUrl ? (msg.phoneUrl.includes('token=') ? msg.phoneUrl : `${msg.phoneUrl}&token=${msg.sessionToken}`) : '');
+        const phoneUrlEl = document.getElementById('phone-url-text');
+        if (phoneUrlEl && pairUrl) {
+          phoneUrlEl.textContent = pairUrl;
+        }
+        const qrBox = document.getElementById('qr-svg-box');
+        if (qrBox && pairUrl && qrBox.dataset.token !== msg.sessionToken) {
+          qrBox.dataset.token = msg.sessionToken;
+          fetch(`/api/qr?text=${encodeURIComponent(pairUrl)}`)
+            .then((r) => r.text())
+            .then((svg) => {
+              if (svg && svg.startsWith('<svg')) {
+                qrBox.innerHTML = svg;
+              }
+            })
+            .catch(() => {});
+        }
+      }
+      if (msg.endpoints) {
+        renderEndpointPills(msg.endpoints);
+      }
+      if (msg.sharedItems) {
+        sharedItemsHistory = msg.sharedItems;
+        window.sharedItemsHistory = sharedItemsHistory;
+      }
+      if (typeof msg.nativeBridgeActive !== 'undefined' || typeof msg.spuActive !== 'undefined') {
+        window.oneGlassNativeActive = Boolean(msg.nativeBridgeActive || msg.spuActive);
+      }
+      updateActiveEdgeBadge();
+      updateSeismicUI(msg.jerk, msg.thresh, msg.typing);
+    } else if (msg.type === 'peers') {
+      connectedPeers = msg.peers || [];
+      if (typeof msg.nativeBridgeActive !== 'undefined' || typeof msg.spuActive !== 'undefined') {
+        window.oneGlassNativeActive = Boolean(msg.nativeBridgeActive || msg.spuActive);
+      }
+      const phones = connectedPeers.filter((p) => p.id !== selfId && p.role === 'phone');
+      const dot = document.getElementById('peer-dot');
+      const label = document.getElementById('peer-label');
+      if (ROLE === 'phone') {
+        const me = connectedPeers.find((p) => p.id === selfId);
+        dot.classList.add('connected');
+        label.textContent = 'Connected to laptop';
+      } else if (phones.length > 0) {
+        dot.classList.add('connected');
+        label.innerHTML = phones.map((p) => `<span class="peer-chip"><i aria-hidden="true"></i>${escapeHtml(p.name || 'Phone')}</span>`).join('');
+        document.getElementById('qr-modal').classList.add('collapsed');
+      } else {
+        dot.classList.remove('connected');
+        label.textContent = 'No phone yet';
+      }
+
+      // Magnetic Bezel Convergence wave: when counterparts transition from 0 to >= 1
+      const counterparts = connectedPeers.filter(
+        (p) => p.id !== selfId && (ROLE === 'phone' ? p.role === 'laptop' : p.role === 'phone')
+      );
+      if (prevCounterpartCount === 0 && counterparts.length >= 1) {
+        const activeEdge = ROLE === 'phone' ? 'top' : (counterparts[0]?.edge || 'right');
+        fireNameDropWave(activeEdge, 0.5, 'Connected');
+        showToast(ROLE === 'phone' ? 'Connected. Flick a card up to send it.' : `Phone connected. Flick a card off the ${activeEdge} edge.`);
+      }
+      prevCounterpartCount = counterparts.length;
+
+      renderBezelStrips();
+      updateActiveEdgeBadge();
+    } else if (msg.type === 'namedrop_wave') {
+      fireNameDropWave(msg.edge || 'right', msg.contactRatio ?? 0.5, msg.source || 'Bezel Tap');
+    } else if (msg.type === 'drag_stream') {
+      updatePhantomCard(msg);
+    } else if (msg.type === 'drag_end') {
+      removePhantomCard(msg.cardId);
+      targetTension = 0;
+    } else if (msg.type === 'card_flick') {
+      removePhantomCard(msg.cardId);
+      targetTension = 0;
+      receiveFlickedCard(msg);
+      if (msg.item) recordRecent(msg.item, 'received');
+    } else if (msg.type === 'card_land') {
+      removePhantomCard(msg.cardId || msg.item?.id);
+      targetTension = 0;
+      if (ROLE === 'laptop') {
+        const savedPath = msg.savedPath || msg.item?.savedPath || '';
+        showClipboardHud({
+          savedPath,
+          name: msg.name || msg.item?.name || '',
+          shortcut: msg.canPasteShortcut || (navigator.platform?.includes('Mac') ? '⌘V' : 'Ctrl+V')
+        });
+      }
+      if (msg.item && !cards.has(msg.item.id)) {
+        receiveFlickedCard(msg);
+      }
+    } else if (msg.type === 'os_clipboard_ready') {
+      if (ROLE === 'laptop') {
+        showClipboardHud({
+          savedPath: msg.savedPath || '',
+          name: msg.name || '',
+          shortcut: msg.canPasteShortcut || (navigator.platform?.includes('Mac') ? '⌘V' : 'Ctrl+V')
+        });
+      }
+    } else if (msg.type === 'canvas_stroke') {
+      receiveRemoteCanvasStroke(msg);
+    } else if (msg.type === 'auto_edge_detected') {
+      const detectedEdge = msg.edge || 'right';
+      showToast(`Using the ${detectedEdge} edge`);
+      for (const p of connectedPeers) {
+        if (p.id === msg.fromId || (!msg.fromId && p.role === 'phone')) {
+          p.edge = detectedEdge;
+        }
+      }
+      renderBezelStrips();
+      updateActiveEdgeBadge();
+    } else {
+      continuityMod?.handleContinuityMessage?.(msg);
+      mobileMod?.handleMobileMessage?.(msg);
+      displayMod?.handleDisplayModeMessage?.(msg);
+      screenPortalMod?.handleScreenPortalMessage?.(msg);
+      cameraScannerMod?.handleScannerMessage?.(msg);
+      webrtcMod?.handleWebRTCSignal?.(msg);
+    }
+  };
+
+  ws.onclose = () => setTimeout(connectWS, 900);
+}
+connectWS();
+window.connectWS = connectWS;
+
+// ============================================================================
+// WebAudio Keep-Alive, WakeLock & Session Resilience
+// ============================================================================
+let audioCtx = null;
+let keepAliveCtx = null;
+let keepAliveOsc = null;
+let keepAliveGain = null;
+
+function ensureAudio() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+}
+
+function ensureAudioAndKeepAlive() {
+  ensureAudio();
+  if (!keepAliveCtx) {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        keepAliveCtx = new AC();
+        keepAliveGain = keepAliveCtx.createGain();
+        keepAliveGain.gain.setValueAtTime(0.00001, keepAliveCtx.currentTime);
+        keepAliveOsc = keepAliveCtx.createOscillator();
+        keepAliveOsc.type = 'sine';
+        keepAliveOsc.frequency.setValueAtTime(32, keepAliveCtx.currentTime);
+        keepAliveOsc.connect(keepAliveGain);
+        keepAliveGain.connect(keepAliveCtx.destination);
+        keepAliveOsc.start();
+      }
+    } catch {}
+  }
+  if (keepAliveCtx && keepAliveCtx.state === 'suspended') {
+    keepAliveCtx.resume().catch(() => {});
+  }
+  if (navigator.wakeLock?.request) {
+    navigator.wakeLock.request('screen').catch(() => {});
+  }
+}
+window.addEventListener('pointerdown', ensureAudioAndKeepAlive, { passive: true });
+window.addEventListener('touchstart', ensureAudioAndKeepAlive, { passive: true });
+
+// Session State Persistence to localStorage / IndexedDB (oneglass_session_state)
+window.pendingClipsQueue = [];
+window.queueOutgoingClip = function(clip) {
+  window.pendingClipsQueue.push(clip);
+  saveSessionState();
+};
+window.flushQueuedTransfers = function() {
+  if (!ws || ws.readyState !== 1) return;
+  if (!window.pendingClipsQueue || !window.pendingClipsQueue.length) return;
+  while (window.pendingClipsQueue.length > 0) {
+    const item = window.pendingClipsQueue.shift();
+    try {
+      ws.send(JSON.stringify(item));
+    } catch {
+      window.pendingClipsQueue.unshift(item);
+      break;
+    }
+  }
+  saveSessionState();
+};
+
+function saveSessionState() {
+  try {
+    const cardList = [];
+    for (const st of cards.values()) {
+      if (st && st.item && !st.item.isPhantom) {
+        cardList.push({
+          id: st.id,
+          item: st.item,
+          x: st.x,
+          y: st.y,
+          w: st.w,
+          h: st.h,
+        });
+      }
+    }
+    const stateObj = {
+      cards: cardList,
+      sessionToken: window.sessionToken || null,
+      savedAt: Date.now(),
+      pendingClips: window.pendingClipsQueue || [],
+    };
+    localStorage.setItem('oneglass_session_state', JSON.stringify(stateObj));
+  } catch {}
+}
+
+function restoreSessionState() {
+  try {
+    const raw = localStorage.getItem('oneglass_session_state');
+    if (!raw) return false;
+    const stateObj = JSON.parse(raw);
+    if (!stateObj) return false;
+    if (cards.size === 0 && Array.isArray(stateObj.cards) && stateObj.cards.length > 0) {
+      for (const c of stateObj.cards) {
+        createCardElement(c.item, c.x, c.y);
+      }
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function instantAutoResume() {
+  ensureAudioAndKeepAlive();
+  if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+    connectWS();
+  } else if (ws.readyState === WebSocket.OPEN) {
+    try {
+      const searchParams = new URLSearchParams(location.search);
+      const currentToken = searchParams.get('token') || window.sessionToken || '';
+      ws.send(JSON.stringify({
+        type: 'hello',
+        role: ROLE,
+        token: currentToken,
+        widthPx: window.innerWidth,
+        heightPx: window.innerHeight,
+        dpr: window.devicePixelRatio || 2,
+      }));
+    } catch {
+      connectWS();
+    }
+  }
+  if (cards.size === 0) {
+    restoreSessionState();
+  }
+  window.flushQueuedTransfers();
+  window.oneGlassWebRTC?.reconnect?.();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    instantAutoResume();
+  } else {
+    saveSessionState();
+  }
+});
+window.addEventListener('pageshow', instantAutoResume);
+window.addEventListener('focus', instantAutoResume);
+window.addEventListener('beforeunload', saveSessionState);
+function playNameDropSound() {
+  try {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const sweep = audioCtx.createOscillator();
+    const sweepG = audioCtx.createGain();
+    sweep.type = 'sine';
+    sweep.frequency.setValueAtTime(340, now);
+    sweep.frequency.exponentialRampToValueAtTime(1320, now + 0.13);
+    sweepG.gain.setValueAtTime(0.01, now);
+    sweepG.gain.linearRampToValueAtTime(0.12, now + 0.11);
+    sweepG.gain.exponentialRampToValueAtTime(0.001, now + 0.21);
+    sweep.connect(sweepG).connect(audioCtx.destination);
+    sweep.start(now);
+    sweep.stop(now + 0.22);
+
+    const sub = audioCtx.createOscillator();
+    const subG = audioCtx.createGain();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(82, now + 0.11);
+    sub.frequency.exponentialRampToValueAtTime(34, now + 0.58);
+    subG.gain.setValueAtTime(0.38, now + 0.11);
+    subG.gain.exponentialRampToValueAtTime(0.001, now + 0.60);
+    sub.connect(subG).connect(audioCtx.destination);
+    sub.start(now + 0.11);
+    sub.stop(now + 0.62);
+
+    [523.25, 659.25, 783.99, 1174.66, 1567.98].forEach((f, idx) => {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sine';
+      const t0 = now + 0.12 + idx * 0.03;
+      osc.frequency.setValueAtTime(f, t0);
+      g.gain.setValueAtTime(0.001, t0);
+      g.gain.linearRampToValueAtTime(0.075 / (1 + idx * 0.2), t0 + 0.025);
+      g.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.95);
+      osc.connect(g).connect(audioCtx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 1.0);
+    });
+  } catch {}
+}
+function playBezelShearSound() {
+  try {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1400, now);
+    osc.frequency.exponentialRampToValueAtTime(2200, now + 0.018);
+    g.gain.setValueAtTime(0.04, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.019);
+  } catch {}
+}
+
+
+window.enablePhoneMotion = function enablePhoneMotion() {
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission().then((state) => {
+      if (state === 'granted') {
+        document.getElementById('motion-btn').style.display = 'none';
+        startPhoneAccelerometer();
+        showToast('Phone Tap Sensor Enabled');
+      }
+    });
+  }
+};
+
+function startPhoneAccelerometer() {
+  let lx = 0, ly = 0, lz = 0, init = false, lastTap = 0;
+  window.addEventListener('devicemotion', (e) => {
+    const a = e.accelerationIncludingGravity || e.acceleration;
+    if (!a || a.x == null) return;
+    if (!init) { lx = a.x; ly = a.y; lz = a.z; init = true; return; }
+    const jerk = Math.hypot(a.x - lx, a.y - ly, a.z - lz);
+    lx = a.x; ly = a.y; lz = a.z;
+    updateSeismicUI(jerk / 50, 0.25, false);
+    const now = Date.now();
+    if (jerk > 13.5 && now - lastTap > 650) {
+      lastTap = now;
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: 'bump_trigger', source: 'Phone Tap', jerk }));
+      }
+    }
+  });
+}
+
+window.triggerManualNameDrop = function triggerManualNameDrop() {
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ type: 'bump_trigger', source: ROLE === 'phone' ? 'Phone' : 'MacBook' }));
+  } else {
+    fireNameDropWave(ROLE === 'phone' ? 'top' : 'right', 0.5, 'NameDrop Wave');
+  }
+};
+
+// Session badge driven by real state: transport from the page origin, pairing from the
+// server's `authenticated` flag in the welcome message. Never claims encryption over HTTP.
+const LOOPBACK_HOSTS = ['127.0.0.1', 'localhost', '::1', '[::1]'];
+const SHACKLE_CLOSED = 'M7 11V7a5 5 0 0 1 10 0v4';
+const SHACKLE_OPEN = 'M7 11V7a5 5 0 0 1 9.9-1';
+
+function updateSessionBadge(authenticated) {
+  const pill = document.getElementById('token-pill');
+  const label = document.getElementById('token-pill-label');
+  const shackle = document.getElementById('token-pill-shackle');
+  if (!pill || !label) return;
+  const isLoopback = LOOPBACK_HOSTS.includes(location.hostname);
+  const isHttps = location.protocol === 'https:';
+  let text;
+  let title;
+  let ok;
+  if (authenticated != null) {
+    document.documentElement.dataset.paired = authenticated ? 'yes' : 'no';
+    if (ROLE === 'phone') {
+      const scr = document.getElementById('unpaired-screen');
+      if (scr) scr.hidden = !!authenticated;
+    }
+  }
+  if (authenticated == null) {
+    text = 'Checking session';
+    title = 'Waiting for the server handshake';
+    ok = null;
+  } else if (isLoopback) {
+    text = 'This computer';
+    title = 'Loopback connection: traffic stays on this machine';
+    ok = true;
+  } else {
+    const transport = isHttps ? 'Encrypted' : 'Unencrypted LAN';
+    text = `${transport} · ${authenticated ? 'Paired' : 'Not paired'}`;
+    title = `${isHttps ? 'HTTPS' : 'Plain HTTP: anyone on this network can read the traffic'}. ${
+      authenticated ? 'Pairing token accepted.' : 'No valid pairing token: scan the QR code on the host.'
+    }`;
+    ok = isHttps && authenticated;
+  }
+  label.textContent = text;
+  pill.title = title;
+  pill.setAttribute('aria-label', title);
+  pill.classList.toggle('is-pending', ok === null);
+  pill.classList.toggle('is-warn', ok === false);
+  if (shackle) shackle.setAttribute('d', ok === false && !isHttps ? SHACKLE_OPEN : SHACKLE_CLOSED);
+}
+
+function initInsecureContextBanner() {
+  const banner = document.getElementById('insecure-banner');
+  if (!banner || window.isSecureContext) return;
+  let dismissed = false;
+  try { dismissed = sessionStorage.getItem('og-insecure-banner-dismissed') === '1'; } catch {}
+  if (dismissed) return;
+  banner.hidden = false;
+  document.getElementById('insecure-banner-dismiss')?.addEventListener('click', () => {
+    banner.hidden = true;
+    try { sessionStorage.setItem('og-insecure-banner-dismissed', '1'); } catch {}
+  });
+}
+
+updateSessionBadge(null);
+initInsecureContextBanner();
+// Phone recent items: last 5 sent or received this session.
+const recentItems = [];
+function recordRecent(item, dir) {
+  if (ROLE !== 'phone' || !item) return;
+  recentItems.unshift({ name: item.name || 'Untitled', size: item.size, url: item.url || '', text: item.noteText || item.textSnippet || '', dir, ts: Date.now() });
+  recentItems.length = Math.min(recentItems.length, 5);
+  renderRecent();
+}
+function renderRecent() {
+  const list = document.getElementById('recent-list');
+  if (!list) return;
+  if (!recentItems.length) { list.innerHTML = '<li class="recent-empty">Nothing sent yet</li>'; return; }
+  list.innerHTML = recentItems.map((r, i) => {
+    const time = new Date(r.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const meta = [r.dir === 'sent' ? 'Sent' : 'Received', r.size ? formatBytes(r.size) : '', time].filter(Boolean).join(' · ');
+    return `<li><button type="button" class="recent-row" data-i="${i}"><span class="recent-name">${escapeHtml(r.name)}</span><span class="recent-meta">${escapeHtml(meta)}</span></button></li>`;
+  }).join('');
+  list.querySelectorAll('.recent-row').forEach((btn) => btn.addEventListener('click', async () => {
+    const r = recentItems[+btn.dataset.i];
+    if (!r) return;
+    const url = r.url ? new URL(r.url, location.href).href : '';
+    try {
+      if (navigator.share) { await navigator.share(url ? { title: r.name, url } : { title: r.name, text: r.text || r.name }); return; }
+    } catch { return; }
+    if (url) window.open(url, '_blank', 'noopener');
+    else if (r.text) navigator.clipboard?.writeText(r.text).then(() => showToast('Copied')).catch(() => {});
+  }));
+}
+window.oneGlassRecordRecent = recordRecent;
+
+(function initSendZone() {
+  const zone = document.getElementById('send-zone');
+  if (!zone || ROLE !== 'phone') return;
+  const over = (on) => (e) => { e.preventDefault(); zone.classList.toggle('is-over', on); };
+  zone.addEventListener('dragenter', over(true));
+  zone.addEventListener('dragover', over(true));
+  zone.addEventListener('dragleave', over(false));
+  zone.addEventListener('drop', (e) => {
+    over(false)(e);
+    if (e.dataTransfer?.files?.length) window.handleFilesSelected(e.dataTransfer.files);
+  });
+})();
+if (ROLE === 'phone' && !params.get('token')) {
+  // No token in the link: if the server never confirms pairing, show the unpaired screen.
+  setTimeout(() => {
+    if (!document.documentElement.dataset.paired) {
+      const scr = document.getElementById('unpaired-screen');
+      if (scr) scr.hidden = false;
+    }
+  }, 3500);
+}
+
+function showToast(text) {
+  const el = document.getElementById('toast');
+  // Keep the toast clear of the header toolbar and the insecure-connection banner; both
+  // change height with the viewport width (the toolbar wraps on narrow screens).
+  const banner = document.getElementById('insecure-banner');
+  let anchorBottom = 0;
+  for (const anchor of [document.querySelector('.top-row'), banner && !banner.hidden ? banner : null]) {
+    if (!anchor) continue;
+    const r = anchor.getBoundingClientRect();
+    if (r.height) anchorBottom = Math.max(anchorBottom, r.bottom);
+  }
+  el.style.top = anchorBottom ? `${Math.round(anchorBottom + 8)}px` : '';
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+let hudTimer = null;
+let currentSavedPath = '';
+
+function showClipboardHud({ savedPath = '', name = '', shortcut = '' } = {}) {
+  currentSavedPath = savedPath || '';
+  const hud = document.getElementById('clipboard-hud');
+  if (!hud) return;
+
+  const resolvedShortcut = shortcut || (navigator.platform?.includes('Mac') ? '⌘V' : 'Ctrl+V');
+  const textEl = document.getElementById('hud-pill-text');
+  if (textEl) {
+    textEl.innerHTML = `Copied. Press <strong>${escapeHtml(resolvedShortcut)}</strong> to paste anywhere. <span class="hud-pill-loc">Saved to ~/Downloads/OneGlass</span>`;
+  }
+
+  hud.classList.add('show');
+  clearTimeout(hudTimer);
+  hudTimer = setTimeout(() => {
+    hud.classList.remove('show');
+  }, 9000);
+}
+
+function dismissClipboardHud() {
+  const hud = document.getElementById('clipboard-hud');
+  if (hud) hud.classList.remove('show');
+  clearTimeout(hudTimer);
+}
+
+window.showClipboardHud = showClipboardHud;
+window.dismissClipboardHud = dismissClipboardHud;
+
+const hudRevealBtn = document.getElementById('hud-reveal-btn');
+if (hudRevealBtn) {
+  hudRevealBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fetch('/api/reveal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: currentSavedPath })
+    })
+    .then((r) => r.json())
+    .then((data) => {
+      showToast(data.ok ? 'Revealed in Finder / Explorer' : 'Opened ~/Downloads/OneGlass');
+    })
+    .catch(() => {
+      showToast('Opening ~/Downloads/OneGlass...');
+    });
+  });
+}
+const hudCloseBtn = document.getElementById('hud-close-btn');
+if (hudCloseBtn) {
+  hudCloseBtn.addEventListener('click', dismissClipboardHud);
+}
+
+async function invokeNativeShare(card) {
+  if (!card) return false;
+  const title = card.name || card.title || 'OneGlass File';
+  const url = card.url;
+
+  if (navigator.share && url) {
+    try {
+      showToast('Preparing for Share...');
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      const mime = blob.type || card.mime || 'application/octet-stream';
+      const ext = (card.ext || (card.name ? card.name.split('.').pop() : 'bin')).toLowerCase();
+      const filename = card.name || `photo.${ext}`;
+      const file = new File([blob], filename, { type: mime });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: title,
+        });
+        showToast('Saved / Shared to OS');
+        return true;
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return false;
+      console.warn('Native file share failed:', err);
+    }
+  }
+
+  if (navigator.share && (url || card.textSnippet || card.noteText)) {
+    try {
+      await navigator.share({
+        title: title,
+        text: card.textSnippet || card.noteText || title,
+        url: url ? (url.startsWith('http') ? url : window.location.origin + url) : undefined,
+      });
+      showToast('Shared via OS');
+      return true;
+    } catch (err) {
+      if (err.name === 'AbortError') return false;
+      console.warn('Native url share failed:', err);
+    }
+  }
+
+  if (url) {
+    const dlUrl = url.includes('?') ? `${url}&dl=1` : `${url}?dl=1`;
+    const a = document.createElement('a');
+    a.href = dlUrl;
+    a.download = card.name || 'oneglass_download';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast('Downloaded to device');
+    return true;
+  }
+  return false;
+}
+
+window.invokeNativeShare = invokeNativeShare;
+
+// ============================================================================
+// WebGL2 Chromatic Liquid-Glass Shader
+// ============================================================================
+const canvas = document.getElementById('gl-canvas');
+const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+let waveStartTime = -100;
+let currentTension = 0;
+let targetTension = 0;
+let activeWaveEdge = ROLE === 'phone' ? 'top' : 'right';
+let contactRatioUniform = 0.5;
+
+// Restrained send cue: a soft, narrow glow at the edge the card left through or arrived at.
+// Gone within about 450ms.
+function showEdgeCue(edge = 'right', ratio = 0.5) {
+  let cue = document.getElementById('edge-cue');
+  if (!cue) {
+    cue = document.createElement('div');
+    cue.id = 'edge-cue';
+    cue.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(cue);
+  }
+  cue.dataset.edge = edge;
+  cue.style.setProperty('--cue-pos', `${Math.round(Math.max(0.1, Math.min(0.9, ratio)) * 100)}%`);
+  cue.getAnimations?.().forEach((a) => a.cancel());
+  cue.animate?.(
+    [{ opacity: 0 }, { opacity: 1, offset: 0.18 }, { opacity: 0 }],
+    { duration: prefersReducedMotion() ? 300 : 450, easing: 'cubic-bezier(0.23, 1, 0.32, 1)', fill: 'forwards' },
+  );
+}
+
+function fireNameDropWave(edge = 'right', ratio = 0.5, label = 'NameDrop') {
+  activeWaveEdge = ROLE === 'phone' ? 'top' : edge;
+  contactRatioUniform = ratio;
+  waveStartTime = performance.now() / 1000.0;
+  showEdgeCue(activeWaveEdge, ratio);
+  playNameDropSound();
+  if (navigator.vibrate && navigator.userActivation?.hasBeenActive) navigator.vibrate([15, 25, 45]);
+  showToast(label);
+}
+
+if (gl) {
+  const vsSrc = `
+    attribute vec2 a_pos;
+    varying vec2 v_uv;
+    void main() {
+      v_uv = a_pos * 0.5 + 0.5;
+      gl_Position = vec4(a_pos, 0.0, 1.0);
+    }
+  `;
+  const fsSrc = `
+    precision highp float;
+    varying vec2 v_uv;
+    uniform vec2 u_res;
+    uniform float u_time;
+    uniform float u_waveAge;
+    uniform float u_tension;
+    uniform vec2 u_portalPt;
+
+    void main() {
+      float minDim = min(u_res.x, u_res.y);
+      vec2 aspect = u_res / minDim;
+      vec2 p = v_uv * aspect;
+      vec2 origin = u_portalPt * aspect;
+      float d = distance(p, origin);
+
+      vec2 cell = fract(p * 20.0) - 0.5;
+      float dotMask = smoothstep(0.07, 0.03, length(cell));
+      vec3 col = vec3(0.031, 0.035, 0.04) + vec3(0.022, 0.025, 0.035) * dotMask;
+
+      float meniscus = exp(-d * (4.6 - u_tension * 2.2)) * (0.95 * u_tension);
+      vec3 portalGrad = mix(
+        vec3(0.37, 0.42, 0.82),
+        mix(vec3(0.22, 0.74, 0.98), vec3(0.96, 0.62, 0.04), clamp(d * 0.9, 0.0, 1.0)),
+        clamp(d * 1.3, 0.0, 1.0)
+      );
+      col += portalGrad * meniscus;
+
+      // The send cue is a plain CSS edge glow now (see showEdgeCue); the shader no longer draws a wave.
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `;
+
+  function compileShader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compileShader(gl.VERTEX_SHADER, vsSrc));
+  gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, fsSrc));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(prog, 'a_pos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  const uRes = gl.getUniformLocation(prog, 'u_res');
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uWaveAge = gl.getUniformLocation(prog, 'u_waveAge');
+  const uTension = gl.getUniformLocation(prog, 'u_tension');
+  const uPortalPt = gl.getUniformLocation(prog, 'u_portalPt');
+
+  function getPortalUV() {
+    const edge = ROLE === 'phone' ? 'top' : activeWaveEdge;
+    const r = contactRatioUniform;
+    if (edge === 'top') return [r, 1.0];
+    if (edge === 'bottom') return [r, 0.0];
+    if (edge === 'right') return [1.0, 1.0 - r];
+    return [0.0, 1.0 - r];
+  }
+
+  function renderLoop(nowMs) {
+    if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    const t = nowMs / 1000.0;
+    currentTension += (targetTension - currentTension) * 0.16;
+    const [px, py] = getPortalUV();
+
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+    gl.uniform1f(uTime, t);
+    gl.uniform1f(uWaveAge, t - waveStartTime);
+    gl.uniform1f(uTension, currentTension);
+    gl.uniform2f(uPortalPt, px, py);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(renderLoop);
+  }
+  requestAnimationFrame(renderLoop);
+}
+
+// ============================================================================
+// Universal Cards & Multi-Strip Bezel Crossing
+// ============================================================================
+const cardsLayer = document.getElementById('cards-layer');
+const cards = new Map();
+Object.defineProperty(cards, 'length', { get() { return this.size; } });
+const phantoms = new Map();
+
+function formatBytes(bytes) {
+  if (!bytes || bytes <= 0) return 'Surface';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function renderCardStageHTML(item) {
+  const cat = item.category || 'file';
+  const badge = `<span class="badge-ext">${escapeHtml(item.ext || cat.toUpperCase())}</span>`;
+
+  if (cat === 'canvas') {
+    return `${badge}<canvas class="shared-draw-canvas" width="320" height="200" style="width:100%;height:100%;display:block;touch-action:none;cursor:crosshair"></canvas>`;
+  }
+  if (cat === 'image' || item.previewUrl) {
+    return `${badge}<img src="${item.previewUrl || item.url}" alt="">`;
+  }
+  if (cat === 'video') {
+    return `${badge}<video src="${item.url}" autoplay muted loop playsinline></video>`;
+  }
+  if (cat === 'audio') {
+    return `${badge}
+      <div class="audio-stage">
+        <div class="vinyl-disc"><div class="vinyl-core"></div></div>
+        <audio src="${item.url}" controls style="width:92%;height:28px;pointer-events:auto"></audio>
+      </div>`;
+  }
+  if (cat === 'code' || item.noteText) {
+    const codeText = escapeHtml(item.textSnippet || item.noteText || item.name);
+    return `${badge}<div class="code-stage">${codeText}</div>`;
+  }
+  if (cat === 'pdf') {
+    return `${badge}
+      <div class="doc-stage">
+        <div class="doc-icon" style="color:var(--rose)">PDF</div>
+        <div style="font-size:11.5px;color:var(--muted)">Document</div>
+      </div>`;
+  }
+  return `${badge}
+    <div class="doc-stage">
+      <div class="doc-icon">${escapeHtml((item.ext || 'BIN').slice(0, 4))}</div>
+      <div style="font-size:11.5px;color:var(--muted)">${formatBytes(item.size)}</div>
+    </div>`;
+}
+
+function evaluateNearestEdgeCrossing(x, y, w, h) {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+
+  if (ROLE === 'phone') {
+    const penPx = Math.max(0, -y);
+    const dist = Math.max(0, y);
+    const ratio = Math.max(0.05, Math.min(0.95, (x + w / 2) / W));
+    const laptops = connectedPeers.filter((p) => p.id !== selfId && p.role === 'laptop');
+    const hasLaptop = laptops.length > 0;
+    return {
+      edge: 'top',
+      penetrationMm: penPx / PX_PER_MM,
+      fractionAcross: penPx / h,
+      tension: hasLaptop ? Math.max(0, Math.min(1, 1 - dist / 180)) : 0,
+      contactRatio: ratio,
+      cardSpanRatio: w / W,
+      hasStrip: hasLaptop,
+    };
+  }
+
+  const candidates = [
+    { edge: 'top', penPx: Math.max(0, -y), dist: Math.max(0, y), ratio: (x + w / 2) / W, span: w / W, dim: h },
+    { edge: 'bottom', penPx: Math.max(0, y + h - H), dist: Math.max(0, H - (y + h)), ratio: (x + w / 2) / W, span: w / W, dim: h },
+    { edge: 'right', penPx: Math.max(0, x + w - W), dist: Math.max(0, W - (x + w)), ratio: (y + h / 2) / H, span: h / H, dim: w },
+    { edge: 'left', penPx: Math.max(0, -x), dist: Math.max(0, x), ratio: (y + h / 2) / H, span: h / H, dim: w },
+  ];
+  candidates.sort((a, b) => (b.penPx - a.penPx) || (a.dist - b.dist));
+  const best = candidates[0];
+  const r = Math.max(0.04, Math.min(0.96, best.ratio));
+
+  const phones = connectedPeers.filter((p) => p.id !== selfId && p.role === 'phone');
+  const hasMatchingStrip =
+    phones.length > 0 &&
+    phones.some((p) => {
+      const sMin = (p.centerRatio ?? 0.5) - (p.spanRatio ?? 0.28) / 2 - best.span / 2;
+      const sMax = (p.centerRatio ?? 0.5) + (p.spanRatio ?? 0.28) / 2 + best.span / 2;
+      return (p.edge || 'right') === best.edge && r >= sMin && r <= sMax;
+    });
+
+  return {
+    edge: best.edge,
+    penetrationMm: best.penPx / PX_PER_MM,
+    fractionAcross: best.penPx / best.dim,
+    tension: hasMatchingStrip ? Math.max(0, Math.min(1, 1 - best.dist / 180)) : 0,
+    contactRatio: r,
+    cardSpanRatio: best.span,
+    hasStrip: hasMatchingStrip,
+  };
+}
+
+function setupSharedCanvasDrawing(canvasEl, cardId) {
+  if (!canvasEl) return;
+  const ctx = canvasEl.getContext('2d');
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = ROLE === 'phone' ? '#f59e0b' : '#5e6ad2';
+
+  let drawing = false;
+  let lx = 0, ly = 0;
+
+  canvasEl.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    drawing = true;
+    canvasEl.setPointerCapture(e.pointerId);
+    const rect = canvasEl.getBoundingClientRect();
+    lx = ((e.clientX - rect.left) / rect.width) * canvasEl.width;
+    ly = ((e.clientY - rect.top) / rect.height) * canvasEl.height;
+  });
+
+  canvasEl.addEventListener('pointermove', (e) => {
+    if (!drawing) return;
+    e.stopPropagation();
+    const rect = canvasEl.getBoundingClientRect();
+    const nx = ((e.clientX - rect.left) / rect.width) * canvasEl.width;
+    const ny = ((e.clientY - rect.top) / rect.height) * canvasEl.height;
+    ctx.beginPath();
+    ctx.moveTo(lx, ly);
+    ctx.lineTo(nx, ny);
+    ctx.stroke();
+    if (ws && ws.readyState === 1) {
+      ws.send(
+        JSON.stringify({
+          type: 'canvas_stroke',
+          cardId,
+          x0: lx,
+          y0: ly,
+          x1: nx,
+          y1: ny,
+          color: ctx.strokeStyle,
+        }),
+      );
+    }
+    lx = nx;
+    ly = ny;
+  });
+
+  const stop = (e) => {
+    if (!drawing) return;
+    e.stopPropagation();
+    drawing = false;
+  };
+  canvasEl.addEventListener('pointerup', stop);
+  canvasEl.addEventListener('pointercancel', stop);
+}
+
+function receiveRemoteCanvasStroke(msg) {
+  for (const el of document.querySelectorAll(`[data-card-id="${msg.cardId}"] canvas.shared-draw-canvas`)) {
+    const ctx = el.getContext('2d');
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = msg.color || '#5e6ad2';
+    ctx.beginPath();
+    ctx.moveTo(msg.x0, msg.y0);
+    ctx.lineTo(msg.x1, msg.y1);
+    ctx.stroke();
+  }
+}
+
+function createCardElement(item, x, y) {
+  const isCanvas = item.category === 'canvas';
+  const w = Math.round((isCanvas ? 80 : CARD_W_MM) * PX_PER_MM);
+  const h = Math.round((isCanvas ? 66 : CARD_H_MM) * PX_PER_MM);
+  const el = document.createElement('div');
+  el.className = 'file-card interactive';
+  el.setAttribute('data-card-id', item.id);
+  el.style.width = `${w}px`;
+  el.style.height = `${h}px`;
+  el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+
+  const dlUrl = item.url ? `${item.url}${item.url.includes('?') ? '&' : '?'}dl=1` : '';
+  const isMobile = ROLE === 'phone' || window.innerWidth <= 768;
+
+  el.innerHTML = `
+    <div class="card-stage">
+      ${renderCardStageHTML(item)}
+      ${item.hintPill ? `
+        <div class="card-hint-pill">
+          ${escapeHtml(item.hintPill)}
+        </div>
+      ` : ''}
+      <button class="card-close" title="Close">
+        <svg class="svg-ic" style="width:11px;height:11px" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="card-meta">
+      <div style="min-width:0;flex:1">
+        <div class="card-name">${escapeHtml(item.name || 'Item')}</div>
+        <div class="card-size card-sub">${escapeHtml(item.sub || formatBytes(item.size))}</div>
+      </div>
+      <div class="card-actions">
+        <button type="button" class="chip-btn copy-btn" title="Copy to Clipboard">Copy</button>
+        ${dlUrl ? `<a class="chip-btn dl-btn" href="${dlUrl}" download="${escapeHtml(item.name || 'file')}" title="Download to device">Download</a>` : ''}
+        ${!isMobile ? `<button type="button" class="chip-btn reveal-btn" title="Show in Finder">Show in Finder</button>` : ''}
+        ${isMobile || dlUrl ? `<button type="button" class="chip-btn share-btn" title="Save / Share to OS">Save / Share</button>` : ''}
+        ${item.url ? `<a class="chip-btn" href="${item.url}" target="_blank">Open</a>` : ''}
+      </div>
+    </div>
+  `;
+
+  const state = { id: item.id, item, x, y, w, h, el };
+  cards.set(item.id, state);
+  cardsLayer.appendChild(el);
+
+  if (isCanvas) {
+    setupSharedCanvasDrawing(el.querySelector('canvas.shared-draw-canvas'), item.id);
+  }
+
+  el.querySelector('.card-close').addEventListener('click', (e) => {
+    e.stopPropagation();
+    el.remove();
+    cards.delete(state.id);
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'drag_end', cardId: state.id }));
+    }
+  });
+
+  const copyBtn = el.querySelector('.copy-btn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const textToCopy = item.textSnippet || item.noteText;
+      if (textToCopy) {
+        navigator.clipboard?.writeText(textToCopy);
+        showToast('Copied Text to Clipboard');
+        return;
+      }
+      if (item.url && (item.mime?.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(item.name || ''))) {
+        try {
+          const resp = await fetch(item.url);
+          const blob = await resp.blob();
+          if (window.ClipboardItem && navigator.clipboard?.write) {
+            const pngBlob = blob.type === 'image/png' ? blob : new Blob([blob], { type: 'image/png' });
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+            showToast('Copied Image to Clipboard (⌘V / Ctrl+V in Figma, Slack, Word)');
+            return;
+          }
+        } catch (err) {
+          console.warn('Image clipboard write failed, copying link:', err);
+        }
+      }
+      navigator.clipboard?.writeText(item.url || item.name || '');
+      showToast('Copied to Clipboard');
+    });
+  }
+
+  const revealBtn = el.querySelector('.reveal-btn');
+  if (revealBtn) {
+    revealBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const targetPath = item.savedPath || item.name || '';
+      fetch('/api/reveal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: targetPath })
+      })
+      .then((r) => r.json())
+      .then((data) => {
+        showToast(data.ok ? 'Revealed in Finder / Explorer' : 'Opened ~/Downloads/OneGlass');
+      })
+      .catch(() => {
+        showToast('Saved in ~/Downloads/OneGlass');
+      });
+    });
+  }
+
+  const shareBtn = el.querySelector('.share-btn');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (typeof window.invokeNativeShare === 'function') {
+        window.invokeNativeShare(item);
+      } else if (typeof invokeNativeShare === 'function') {
+        invokeNativeShare(item);
+      }
+    });
+  }
+
+  let dragging = false;
+  let activePointerId = null;
+  let grabOffsetX = 0, grabOffsetY = 0;
+  let springRaf = 0;
+
+  // Small spring (no dependency). Starts from the card's current on-screen position and the
+  // release velocity, so a card grabbed mid-flight continues from where it is.
+  // damping 1 = no overshoot (snap-back, returns); about 0.8 only for a real throw.
+  function stopSpring() { if (springRaf) cancelAnimationFrame(springRaf); springRaf = 0; }
+  function springTo(tx, ty, { damping = 1, response = 0.38, vx0 = 0, vy0 = 0, until, onDone } = {}) {
+    stopSpring();
+    if (prefersReducedMotion()) {
+      state.x = tx; state.y = ty;
+      el.style.transition = 'opacity 160ms var(--ease-out)';
+      el.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
+      onDone?.();
+      return;
+    }
+    el.style.transition = 'opacity 200ms var(--ease-out)';
+    const k = (2 * Math.PI / response) ** 2;
+    const c = (4 * Math.PI * damping) / response;
+    let x = state.x, y = state.y;
+    let svx = Math.max(-6000, Math.min(6000, vx0)), svy = Math.max(-6000, Math.min(6000, vy0));
+    let last = performance.now();
+    const step = (now) => {
+      const dt = Math.min(0.034, (now - last) / 1000);
+      last = now;
+      const h = dt / 4;
+      for (let i = 0; i < 4; i++) {
+        svx += (-k * (x - tx) - c * svx) * h; x += svx * h;
+        svy += (-k * (y - ty) - c * svy) * h; y += svy * h;
+      }
+      state.x = x; state.y = y;
+      el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+      const settled = Math.abs(x - tx) < 0.5 && Math.abs(y - ty) < 0.5 && Math.abs(svx) < 8 && Math.abs(svy) < 8;
+      if (settled || (until && until(x, y))) {
+        if (settled) { state.x = tx; state.y = ty; el.style.transform = `translate3d(${tx}px, ${ty}px, 0)`; }
+        springRaf = 0;
+        onDone?.();
+        return;
+      }
+      springRaf = requestAnimationFrame(step);
+    };
+    springRaf = requestAnimationFrame(step);
+  }
+  let lastMoveTs = 0, vx = 0, vy = 0;
+
+  el.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('a, button, audio, video, canvas.shared-draw-canvas')) return;
+    if (dragging || state._sent) return;
+    stopSpring();
+    const hintEl = el.querySelector('.card-hint-pill');
+    if (hintEl) hintEl.style.opacity = '0';
+    ensureAudio();
+    dragging = true;
+    activePointerId = e.pointerId;
+    el.setPointerCapture(e.pointerId);
+    el.style.transition = 'none';
+    grabOffsetX = e.clientX - state.x;
+    grabOffsetY = e.clientY - state.y;
+    lastMoveTs = performance.now();
+    vx = 0; vy = 0;
+    el.style.zIndex = 30;
+  });
+
+  el.addEventListener('pointermove', (e) => {
+    if (!dragging || e.pointerId !== activePointerId) return;
+    const now = performance.now();
+    const dt = Math.max(1, now - lastMoveTs);
+    let nx = e.clientX - grabOffsetX;
+    let ny = e.clientY - grabOffsetY;
+    const cross = evaluateNearestEdgeCrossing(nx, ny, w, h);
+
+    const isPen = cross.penetrationMm > 0;
+    if (!state._wasPenetrating && isPen) {
+      playBezelShearSound();
+      if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(8);
+    }
+    state._wasPenetrating = isPen;
+    if (!cross.hasStrip && cross.penetrationMm > 0) {
+      const W = window.innerWidth, H = window.innerHeight;
+      if (nx < 0) nx = appleRubberband(nx, 180);
+      if (nx + w > W) nx = W - w + appleRubberband(nx + w - W, 180);
+      if (ny < 0) ny = appleRubberband(ny, 180);
+      if (ny + h > H) ny = H - h + appleRubberband(ny + h - H, 180);
+    }
+
+    vx = 0.65 * vx + 0.35 * ((nx - state.x) / dt);
+    vy = 0.65 * vy + 0.35 * ((ny - state.y) / dt);
+    state.x = nx;
+    state.y = ny;
+    lastMoveTs = now;
+
+    const rotY = Math.max(-10, Math.min(10, vx * 5.5));
+    const rotX = Math.max(-10, Math.min(10, -vy * 5.5));
+    el.style.transform = `translate3d(${nx.toFixed(1)}px, ${ny.toFixed(1)}px, 0) perspective(900px) rotateX(${rotX.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg)`;
+
+    activeWaveEdge = cross.edge;
+    targetTension = cross.tension;
+    contactRatioUniform = cross.contactRatio;
+    el.classList.toggle('crossing', cross.hasStrip && cross.penetrationMm > 0);
+
+    const inBezelZone = cross.hasStrip && (cross.penetrationMm > 0 || cross.tension > 0.08);
+    if (inBezelZone) {
+      state.inBezelZone = true;
+      if (now - (state.lastStreamTs || 0) >= 16) {
+        state.lastStreamTs = now;
+        window.sendOneGlassFast({
+          type: 'drag_stream',
+          cardId: state.id,
+          edge: cross.edge,
+          item: state.item,
+          penetrationMm: cross.penetrationMm,
+          contactRatio: cross.contactRatio,
+          cardSpanRatio: cross.cardSpanRatio,
+          tension: cross.tension,
+        });
+      }
+    } else if (state.inBezelZone) {
+      state.inBezelZone = false;
+      state.lastStreamTs = now;
+      window.sendOneGlassFast({
+        type: 'drag_stream',
+        cardId: state.id,
+        edge: cross.edge,
+        item: state.item,
+        penetrationMm: 0,
+        contactRatio: cross.contactRatio,
+        cardSpanRatio: cross.cardSpanRatio,
+        tension: 0,
+      });
+    }
+  });
+
+  function finishDrag(e) {
+    if (!dragging || (e && e.pointerId !== activePointerId)) return;
+    dragging = false;
+    state._wasPenetrating = false;
+    activePointerId = null;
+    el.style.zIndex = 20;
+    el.classList.remove('crossing');
+    const crossNow = evaluateNearestEdgeCrossing(state.x, state.y, w, h);
+    if (state.inBezelZone) {
+      state.inBezelZone = false;
+      window.sendOneGlassFast({
+        type: 'drag_stream',
+        cardId: state.id,
+        edge: crossNow.edge,
+        item: state.item,
+        penetrationMm: 0,
+        contactRatio: crossNow.contactRatio,
+        cardSpanRatio: crossNow.cardSpanRatio,
+        tension: 0,
+      });
+    }
+
+    const projX = state.x + appleProject(vx, 0.985);
+    const projY = state.y + appleProject(vy, 0.985);
+    const crossProj = evaluateNearestEdgeCrossing(projX, projY, w, h);
+    const edge = crossNow.edge;
+
+    const speedTowardEdge =
+      (edge === 'top' && vy < -0.35) ||
+      (edge === 'bottom' && vy > 0.35) ||
+      (edge === 'right' && vx > 0.35) ||
+      (edge === 'left' && vx < -0.35);
+
+    if (isCanvas && crossNow.hasStrip && crossNow.penetrationMm > 4 && !speedTowardEdge) {
+      springTo(state.x, state.y, { damping: 1, response: 0.3 });
+      showToast('Canvas now spans both screens');
+      return;
+    }
+
+    if (crossNow.hasStrip && (crossNow.fractionAcross > 0.36 || (speedTowardEdge && crossProj.fractionAcross > 0.25))) {
+      if (ws && ws.readyState === 1) {
+        ws.send(
+          JSON.stringify({
+            type: 'card_flick',
+            cardId: state.id,
+            edge,
+            phoneFlickDir: ROLE === 'phone' ? edge : undefined,
+            item: state.item,
+            contactRatio: crossNow.contactRatio,
+            cardSpanRatio: crossNow.cardSpanRatio,
+          }),
+        );
+      }
+      fireNameDropWave(edge, crossNow.contactRatio, `Transferred ${state.item.name}`);
+      // A real throw: keep the release velocity and let a slightly underdamped spring carry it off.
+      state._sent = true;
+      recordRecent(state.item, 'sent');
+      el.style.pointerEvents = 'none';
+      const offX = edge === 'right' ? window.innerWidth + 320 : edge === 'left' ? -w - 320 : state.x;
+      const offY = edge === 'top' ? -h - 320 : edge === 'bottom' ? window.innerHeight + 320 : state.y;
+      const W0 = window.innerWidth, H0 = window.innerHeight;
+      const gone = () => { if (!el.isConnected) return; el.remove(); cards.delete(state.id); };
+      springTo(offX, offY, {
+        damping: 0.8, response: 0.32, vx0: vx * 1000, vy0: vy * 1000,
+        until: (x, y) => x > W0 + 8 || x + w < -8 || y + h < -8 || y > H0 + 8,
+        onDone: gone,
+      });
+      el.style.transition = 'opacity 220ms var(--ease-out) 160ms';
+      el.style.opacity = '0';
+      setTimeout(gone, 600);
+    } else {
+      const counterpartCount = ROLE === 'phone'
+        ? connectedPeers.filter((p) => p.id !== selfId && p.role === 'laptop').length
+        : connectedPeers.filter((p) => p.id !== selfId && p.role === 'phone').length;
+
+      if (!crossNow.hasStrip && (crossNow.penetrationMm > 0 || (speedTowardEdge && crossProj.penetrationMm > 0) || crossNow.fractionAcross > 0.15)) {
+        if (counterpartCount === 0) {
+          showToast('Pair a phone first, then flick cards to it');
+        } else {
+          showToast('Flick toward the glowing edge to send');
+        }
+      }
+
+      const tx = Math.max(12, Math.min(window.innerWidth - w - 12, state.x));
+      const ty = Math.max(58, Math.min(window.innerHeight - h - 78, state.y));
+      // Critically damped return from where the card is, carrying the release velocity. No overshoot.
+      springTo(tx, ty, { damping: 1, response: 0.4, vx0: vx * 1000, vy0: vy * 1000 });
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: 'drag_end', cardId: state.id }));
+      }
+    }
+    targetTension = 0;
+  }
+
+  el.addEventListener('pointerup', finishDrag);
+  el.addEventListener('pointercancel', finishDrag);
+}
+
+// ============================================================================
+// 120Hz Kinematic Kalman Filter / Dead-Reckoning Interpolator for Zero-Jitter Bezel Crossing
+// ============================================================================
+const phantomKinematics = new Map();
+
+function getPhantomKalman(cardId, edge, item) {
+  let k = phantomKinematics.get(cardId);
+  if (!k) {
+    k = {
+      cardId,
+      edge,
+      item,
+      p: 0,
+      v: 0,
+      targetP: 0,
+      r: 0.5,
+      rVel: 0,
+      targetR: 0.5,
+      P: [8, 0, 0, 8],
+      Q: [0.04, 0.18],
+      R: 0.75,
+      lastPacketTs: performance.now(),
+      active: true,
+    };
+    phantomKinematics.set(cardId, k);
+  }
+  k.edge = edge;
+  if (item) k.item = item;
+  return k;
+}
+
+function kalmanPredictAndUpdate(k, measuredP, measuredR, dt) {
+  // 1. Kinematic state prediction
+  k.p += k.v * dt;
+  k.P[0] += dt * (k.P[1] + k.P[2]) + dt * dt * k.P[3] + k.Q[0];
+  k.P[1] += dt * k.P[3];
+  k.P[2] += dt * k.P[3];
+  k.P[3] += k.Q[1];
+
+  // 2. Kalman measurement update
+  const y = measuredP - k.p;
+  const S = k.P[0] + k.R;
+  const K0 = k.P[0] / S;
+  const K1 = k.P[2] / S;
+
+  k.p += K0 * y;
+  k.v += K1 * y;
+
+  k.P[0] *= (1 - K0);
+  k.P[1] *= (1 - K0);
+  k.P[2] = -K1 * k.P[0] + k.P[2];
+  k.P[3] = -K1 * k.P[1] + k.P[3];
+
+  k.targetP = measuredP;
+  k.targetR = measuredR;
+  k.active = true;
+}
+
+let lastKalmanRafTs = performance.now();
+function stepPhantomKalmanLoop(now) {
+  const dt = Math.min(0.04, Math.max(0.002, (now - lastKalmanRafTs) / 1000));
+  lastKalmanRafTs = now;
+
+  for (const [cardId, k] of phantomKinematics.entries()) {
+    if (!k.active) continue;
+
+    const pDiff = k.targetP - k.p;
+    k.v += (pDiff * 38 - k.v * 14) * dt;
+    k.p += k.v * dt;
+
+    const rDiff = k.targetR - k.r;
+    k.rVel += (rDiff * 38 - k.rVel * 14) * dt;
+    k.r += k.rVel * dt;
+
+    applyPhantomDOM(cardId, k.edge, k.p, k.r, k.item);
+  }
+
+  requestAnimationFrame(stepPhantomKalmanLoop);
+}
+requestAnimationFrame(stepPhantomKalmanLoop);
+
+function applyPhantomDOM(cardId, edge, penMm, contactRatio, item) {
+  if (penMm <= 0.3) {
+    const el = phantoms.get(cardId);
+    if (el) {
+      el.remove();
+      phantoms.delete(cardId);
+    }
+    return;
+  }
+
+  const isCanvas = item?.category === 'canvas';
+  const w = Math.round((isCanvas ? 80 : CARD_W_MM) * PX_PER_MM);
+  const h = Math.round((isCanvas ? 66 : CARD_H_MM) * PX_PER_MM);
+  const penPx = penMm * PX_PER_MM;
+
+  let el = phantoms.get(cardId);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = isCanvas ? 'file-card interactive' : 'file-card phantom';
+    el.setAttribute('data-card-id', cardId);
+    el.id = 'incoming-ghost-card';
+    el.style.width = `${w}px`;
+    el.style.height = `${h}px`;
+    const curItem = item || {};
+    el.innerHTML = `
+      <div class="card-stage">${renderCardStageHTML(curItem)}</div>
+      <div class="card-meta">
+        <div>
+          <div class="card-name">${escapeHtml(curItem.name || 'Incoming')}</div>
+          <div class="card-size">Peer Fusion · 120Hz</div>
+        </div>
+      </div>
+    `;
+    phantoms.set(cardId, el);
+    cardsLayer.appendChild(el);
+    if (isCanvas) {
+      setupSharedCanvasDrawing(el.querySelector('canvas.shared-draw-canvas'), cardId);
+    }
+  }
+
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const r = Math.max(0.04, Math.min(0.96, contactRatio));
+  let x = 0, y = 0;
+  if (edge === 'top') {
+    x = Math.round(r * W - w / 2);
+    y = Math.round(-h + penPx);
+  } else if (edge === 'bottom') {
+    x = Math.round(r * W - w / 2);
+    y = Math.round(H - penPx);
+  } else if (edge === 'right') {
+    x = Math.round(W - penPx);
+    y = Math.round(r * H - h / 2);
+  } else if (edge === 'left') {
+    x = Math.round(-w + penPx);
+    y = Math.round(r * H - h / 2);
+  }
+  el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+}
+
+function updatePhantomCard(msg) {
+  const edge = ROLE === 'phone' ? 'top' : msg.edge || 'right';
+  activeWaveEdge = edge;
+  targetTension = msg.tension || 0;
+  contactRatioUniform = msg.contactRatio ?? 0.5;
+
+  if (!msg.penetrationMm || msg.penetrationMm <= 0.4) {
+    removePhantomCard(msg.cardId);
+    return;
+  }
+
+  const now = performance.now();
+  const k = getPhantomKalman(msg.cardId, edge, msg.item);
+  const dt = Math.min(0.05, Math.max(0.002, (now - k.lastPacketTs) / 1000));
+  k.lastPacketTs = now;
+
+  kalmanPredictAndUpdate(k, msg.penetrationMm, msg.contactRatio ?? 0.5, dt);
+}
+
+function removePhantomCard(cardId) {
+  const k = phantomKinematics.get(cardId);
+  if (k) {
+    k.active = false;
+    phantomKinematics.delete(cardId);
+  }
+  const el = phantoms.get(cardId);
+  if (el) {
+    el.remove();
+    phantoms.delete(cardId);
+  }
+}
+
+function receiveFlickedCard(msg) {
+  if (ROLE === 'laptop' && (msg.fromRole === 'phone' || msg.phoneFlickDir)) {
+    let calibratedEdge = 'right';
+    const flickDir = msg.phoneFlickDir || 'top';
+    if (flickDir === 'top') calibratedEdge = 'bottom';
+    else if (flickDir === 'bottom') calibratedEdge = 'top';
+    else if (flickDir === 'left') calibratedEdge = 'right';
+    else if (flickDir === 'right') calibratedEdge = 'left';
+    for (const p of connectedPeers) {
+      if (p.id === msg.fromId || p.role === 'phone') {
+        p.edge = calibratedEdge;
+      }
+    }
+    renderBezelStrips();
+    updateActiveEdgeBadge();
+  }
+  const edge = ROLE === 'phone' ? 'top' : msg.edge || 'right';
+  const isCanvas = msg.item?.category === 'canvas';
+  const w = Math.round((isCanvas ? 80 : CARD_W_MM) * PX_PER_MM);
+  const h = Math.round((isCanvas ? 66 : CARD_H_MM) * PX_PER_MM);
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const r = msg.contactRatio ?? 0.5;
+
+  let startX = W / 2 - w / 2, startY = H / 2 - h / 2;
+  if (edge === 'top') { startX = r * W - w / 2; startY = -h * 0.4; }
+  else if (edge === 'bottom') { startX = r * W - w / 2; startY = H - h * 0.6; }
+  else if (edge === 'right') { startX = W - w * 0.6; startY = r * H - h / 2; }
+  else if (edge === 'left') { startX = -w * 0.4; startY = r * H - h / 2; }
+
+  const landX = Math.round(Math.max(14, Math.min(W - w - 14, W * (0.28 + Math.random() * 0.44) - w / 2)));
+  const landY = Math.round(Math.max(68, Math.min(H - h - 84, H * (0.30 + Math.random() * 0.34) - h / 2)));
+
+  const item = {
+    ...msg.item,
+    id: msg.item?.category === 'canvas' ? msg.item.id : `rx_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    sub: `${formatBytes(msg.item?.size)} · ${msg.fromName || 'Peer'}`,
+  };
+  sharedItemsHistory.unshift(item);
+  window.sharedItemsHistory = sharedItemsHistory;
+  createCardElement(item, startX, startY);
+  const st = cards.get(item.id);
+  if (st) {
+    requestAnimationFrame(() => {
+      st.el.style.transition = 'transform 380ms var(--ease-drawer)';
+      st.x = landX;
+      st.y = landY;
+      st.el.style.transform = `translate3d(${landX}px, ${landY}px, 0)`;
+      setTimeout(() => { st.el.style.transition = ''; }, 390);
+    });
+  }
+  playNameDropSound();
+  showToast(`Received ${item.name}`);
+  if (ROLE === 'laptop' && (msg.savedPath || item.savedPath)) {
+    showClipboardHud({
+      savedPath: msg.savedPath || item.savedPath,
+      name: item.name,
+      shortcut: navigator.platform?.includes('Mac') ? '⌘V' : 'Ctrl+V'
+    });
+  }
+  if (ROLE === 'phone' || window.innerWidth <= 768) {
+    if (typeof window.invokeNativeShare === 'function') {
+      window.invokeNativeShare(item);
+    } else if (typeof invokeNativeShare === 'function') {
+      invokeNativeShare(item);
+    }
+  }
+}
+
+window.handleFilesSelected = async function handleFilesSelected(fileList) {
+  if (!fileList || fileList.length === 0) return;
+  for (const file of fileList) {
+    let previewUrl = null;
+    if (file.type.startsWith('image/') && file.size < 15 * 1024 * 1024) {
+      previewUrl = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const tempId = 'upl_' + Math.random().toString(36).slice(2, 9);
+    const initialItem = {
+      id: tempId,
+      name: file.name,
+      ext: (file.name.split('.').pop() || 'bin').toUpperCase(),
+      size: file.size,
+      mime: file.type || 'application/octet-stream',
+      previewUrl,
+      sub: 'Uploading 0%',
+      from: ROLE,
+    };
+
+    const x = Math.round(window.innerWidth * 0.5 - (CARD_W_MM * PX_PER_MM) / 2 + (Math.random() - 0.5) * 40);
+    const y = Math.round(window.innerHeight * 0.48 - (CARD_H_MM * PX_PER_MM) / 2 + (Math.random() - 0.5) * 30);
+    createCardElement(initialItem, x, y);
+    const cardEl = document.querySelector(`.file-card[data-card-id="${tempId}"]`);
+
+    showToast(`Uploading ${file.name}`);
+
+    let uploaded;
+    try {
+      if (continuityMod?.uploadFileWithProgress) {
+        uploaded = await continuityMod.uploadFileWithProgress(file, ROLE, (pct) => {
+          if (cardEl) {
+            const subEl = cardEl.querySelector('.card-sub, .card-size');
+            if (subEl) subEl.textContent = `Uploading ${pct}%`;
+          }
+        });
+      } else {
+        const q = new URLSearchParams({ name: file.name, mime: file.type || 'application/octet-stream', from: ROLE });
+        const res = await fetch(`/api/upload?${q.toString()}`, { method: 'POST', body: file });
+        uploaded = await res.json();
+      }
+
+      if (uploaded) {
+        if (cardEl) {
+          cardEl.setAttribute('data-card-id', uploaded.id || tempId);
+          const subEl = cardEl.querySelector('.card-sub, .card-size');
+          if (subEl) subEl.textContent = `${formatBytes(file.size)} · Ready`;
+          const st = cards.get(tempId);
+          if (st) {
+            cards.delete(tempId);
+            st.id = uploaded.id || tempId;
+            st.item = { ...uploaded, previewUrl: uploaded.url || previewUrl };
+            cards.set(st.id, st);
+          }
+        }
+        sharedItemsHistory.unshift(uploaded);
+        window.sharedItemsHistory = sharedItemsHistory;
+        showToast(`Uploaded ${file.name}`);
+      }
+    } catch (err) {
+      if (cardEl) {
+        const subEl = cardEl.querySelector('.card-sub, .card-size');
+        if (subEl) subEl.textContent = 'Upload failed';
+      }
+      showToast(`Upload failed: ${file.name}`);
+    }
+  }
+};
+
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+    window.handleFilesSelected(e.dataTransfer.files);
+  }
+});
+
+window.addEventListener('paste', (e) => {
+  if (e.clipboardData && e.clipboardData.files.length > 0) {
+    window.handleFilesSelected(e.clipboardData.files);
+    return;
+  }
+  const text = e.clipboardData?.getData('text/plain');
+  if (text && text.trim()) {
+    spawnTextCard(text.trim());
+    continuityMod?.beamClipboardText?.(text.trim());
+  }
+});
+
+window.pasteFromClipboard = async function pasteFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text && text.trim()) {
+      spawnTextCard(text.trim());
+      continuityMod?.beamClipboardText?.(text.trim());
+      return;
+    }
+  } catch {}
+  const manual = prompt('Paste text, URL, or code snippet:');
+  if (manual && manual.trim()) {
+    spawnTextCard(manual.trim());
+    continuityMod?.beamClipboardText?.(manual.trim());
+  }
+};
+
+let clipCounter = 1;
+function spawnTextCard(text) {
+  const isUrl = /^https?:\/\//i.test(text);
+  const id = `clip_${Date.now()}_${clipCounter++}`;
+  const x = Math.round(window.innerWidth * 0.5 - (CARD_W_MM * PX_PER_MM) / 2);
+  const y = Math.round(window.innerHeight * 0.48 - (CARD_H_MM * PX_PER_MM) / 2);
+  createCardElement(
+    {
+      id,
+      name: isUrl ? new URL(text).hostname : `Snippet #${clipCounter - 1}`,
+      ext: isUrl ? 'URL' : 'TEXT',
+      category: 'code',
+      noteText: text,
+      url: isUrl ? text : undefined,
+      sub: 'Clipboard',
+    },
+    x,
+    y,
+  );
+}
+
+window.spawnSpanningCanvasCard = function spawnSpanningCanvasCard() {
+  const id = `shared_canvas_1`;
+  const x = Math.round(window.innerWidth * 0.5 - 130);
+  const y = Math.round(window.innerHeight * 0.46 - 105);
+  createCardElement(
+    {
+      id,
+      name: 'Spanning Sketchpad',
+      ext: 'CANVAS',
+      category: 'canvas',
+      sub: 'Span across bezel & draw',
+    },
+    x,
+    y,
+  );
+};
+
+function initStarterCards() {
+  if (cards.length > 0 || cards.size > 0) return;
+  if (restoreSessionState() && cards.size > 0) return;
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const cardW = Math.round(CARD_W_MM * PX_PER_MM);
+  const cardH = Math.round(CARD_H_MM * PX_PER_MM);
+
+  if (ROLE === 'phone') {
+    const x = Math.round((W - cardW) / 2);
+    const y1 = Math.round(Math.max(H * 0.17, 150));
+    const y2 = Math.round(H * 0.52);
+
+    createCardElement(
+      {
+        id: 'starter_design_tokens',
+        name: 'Try me.txt',
+        ext: 'TXT',
+        category: 'note',
+        size: 1420,
+        sub: 'Note · 1 KB',
+        textSnippet: 'Flick this card up off the top of the screen. It lands on your laptop.',
+        noteText: 'Flick this card up off the top of the screen. It lands on your laptop.',
+        hintPill: 'Flick up to send',
+      },
+      x,
+      y1,
+    );
+  } else {
+    const narrow = W < cardW * 2 + 420;
+    const x1 = narrow ? Math.round((W - cardW) / 2) : Math.round(W * 0.38 - cardW / 2);
+    const y1 = narrow ? Math.round(Math.max(110, H * 0.14)) : Math.round(H * 0.44 - cardH / 2);
+    const x2 = narrow ? x1 : Math.round(W * 0.58 - cardW / 2);
+    const y2 = narrow ? Math.min(y1 + cardH + 20, Math.round(H - cardH - 120)) : Math.round(H * 0.47 - cardH / 2);
+
+    createCardElement(
+      {
+        id: 'starter_continuity_spec',
+        name: 'Welcome to OneGlass.pdf',
+        ext: 'PDF',
+        category: 'pdf',
+        size: 248000,
+        sub: 'PDF · 242 KB',
+        hintPill: 'Flick toward the edge to send',
+      },
+      x1,
+      y1,
+    );
+
+    createCardElement(
+      {
+        id: 'starter_design_tokens',
+        name: 'Try me.txt',
+        ext: 'TXT',
+        category: 'note',
+        size: 1420,
+        sub: 'Note · 1 KB',
+        textSnippet: 'Drag this card off the edge of the screen. It lands on your phone.',
+        noteText: 'Drag this card off the edge of the screen. It lands on your phone.',
+        hintPill: 'Flick toward the edge to send',
+      },
+      x2,
+      y2,
+    );
+  }
+}
+
+renderBezelStrips();
+initStarterCards();
+
+const ctx = {
+  getWs: () => ws,
+  getRole: () => ROLE,
+  getPeers: () => connectedPeers,
+  getSelfId: () => selfId,
+  onFilesPicked: (files) => window.handleFilesSelected(files),
+  onSpawnTextCard: (txt) => spawnTextCard(txt),
+  onSpawnCard: (item) => {
+    const x = Math.round(window.innerWidth * 0.5 - (CARD_W_MM * PX_PER_MM) / 2);
+    const y = Math.round(window.innerHeight * 0.48 - (CARD_H_MM * PX_PER_MM) / 2);
+    createCardElement(item, x, y);
+  },
+  onTriggerNameDrop: () => window.triggerManualNameDrop(),
+  showToast,
+};
+
+import('./continuity-features.js')
+  .then((m) => {
+    continuityMod = m.initContinuityFeatures?.(ctx);
+    window.oneGlassPresets = (preset) => continuityMod?.applyStripPreset?.(preset);
+    window.oneGlassHistory = () => continuityMod?.toggleHistoryDrawer?.(window.sharedItemsHistory || sharedItemsHistory);
+  })
+  .catch(() => {});
+
+import('./mobile-ux.js')
+  .then((m) => {
+    mobileMod = m.initMobileUX?.(ctx);
+  })
+  .catch(() => {});
+
+import('./display-modes.js')
+  .then((m) => {
+    displayMod = m.initDisplayModes?.(ctx);
+    window.oneGlassDisplayModes = displayMod;
+  })
+  .catch(() => {});
+
+import('./screen-portal.js')
+  .then((m) => {
+    screenPortalMod = m.initScreenPortal?.(ctx);
+    window.oneGlassScreenPortal = screenPortalMod;
+  })
+  .catch(() => {});
+
+import('./camera-scanner.js')
+  .then((m) => {
+    cameraScannerMod = m.initCameraScanner?.(ctx);
+    window.oneGlassCameraScanner = cameraScannerMod;
+  })
+  .catch(() => {});
+
+import('./webrtc-p2p.js')
+  .then((m) => {
+    webrtcMod = m.initWebRTCP2P?.({
+      ...ctx,
+      onP2PMessage: (msg) => {
+        if (msg.type === 'drag_stream') updatePhantomCard(msg);
+        else if (msg.type === 'drag_end') removePhantomCard(msg.cardId);
+        else if (msg.type === 'card_flick') receiveFlickedCard(msg);
+        else if (msg.type === 'canvas_stroke') receiveRemoteCanvasStroke(msg);
+        else {
+          continuityMod?.handleContinuityMessage?.(msg);
+          mobileMod?.handleMobileMessage?.(msg);
+          displayMod?.handleDisplayModeMessage?.(msg);
+          screenPortalMod?.handleScreenPortalMessage?.(msg);
+          cameraScannerMod?.handleScannerMessage?.(msg);
+        }
+      },
+    });
+    window.oneGlassWebRTC = webrtcMod;
+  })
+  .catch(() => {});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
