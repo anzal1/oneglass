@@ -41,6 +41,9 @@ node bin/oneglass.mjs --no-open
 
 # Query status and diagnostics of a running OneGlass server instance
 node bin/oneglass.mjs --status
+
+# Also send what you copy on the laptop to paired phones (off by default)
+node bin/oneglass.mjs --sync-clipboard
 ```
 
 - **Laptop Surface:** Open `http://127.0.0.1:8484` in any modern desktop browser (Press **`⌘K`** for the Command Palette).
@@ -223,12 +226,13 @@ OneGlass eliminates corporate and hotel Wi-Fi restrictions with automatic multi-
 
 ## Cross-Platform Host OS Clipboard Bridge
 
-Bidirectional host OS clipboard synchronization works out-of-the-box across **macOS, Linux, and Windows** with zero external npm dependencies:
+Host OS clipboard integration works out of the box across **macOS, Linux, and Windows** with zero external npm dependencies:
 
 - **macOS:** Native `pbcopy` and `pbpaste` integration (or `oneglass_os` NSStatusWindow pasteboard observer when `--native` is active).
 - **Linux:** Automatic Wayland (`wl-copy` / `wl-paste`) detection with graceful fallback to X11 (`xclip` / `xsel`).
 - **Windows:** High-speed `clip.exe` stdin pipe with `powershell Get-Clipboard / Set-Clipboard` integration.
-- **Bidirectional Sync:** Copy text on your phone and it appears immediately in your desktop OS clipboard; copy text on your laptop and paired phones update in real time.
+- **Phone to laptop:** text and files you send from a paired phone land in your desktop clipboard.
+- **Laptop to phone (opt-in):** start with `--sync-clipboard` to send everything you copy on the laptop to paired phones. It is off by default so passwords you copy never leave the laptop unless you ask.
 
 ---
 

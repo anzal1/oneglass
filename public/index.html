@@ -3650,6 +3650,11 @@ window.spawnSpanningCanvasCard = function spawnSpanningCanvasCard() {
 };
 
 function initStarterCards() {
+  // A tab that loads hidden can report a 0x0 window; place the cards once it has a real size.
+  if (!window.innerWidth || !window.innerHeight) {
+    window.addEventListener('resize', initStarterCards, { once: true });
+    return;
+  }
   if (cards.length > 0 || cards.size > 0) return;
   if (restoreSessionState() && cards.size > 0) return;
   const W = window.innerWidth;
@@ -3718,6 +3723,24 @@ function initStarterCards() {
 
 renderBezelStrips();
 initStarterCards();
+
+// Keep every card reachable when the window gets smaller.
+function keepCardsOnScreen() {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  if (!W || !H) return;
+  for (const st of cards.values()) {
+    if (st._sent || !st.el?.isConnected) continue;
+    const x = Math.min(Math.max(st.x, 8), Math.max(8, W - st.w - 8));
+    const y = Math.min(Math.max(st.y, 64), Math.max(64, H - st.h - 96));
+    if (x !== st.x || y !== st.y) {
+      st.x = x;
+      st.y = y;
+      st.el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    }
+  }
+}
+window.addEventListener('resize', keepCardsOnScreen);
 
 const ctx = {
   getWs: () => ws,

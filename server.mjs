@@ -305,9 +305,12 @@ function readHostClipboardAsync(cb) {
   } catch {}
 }
 
+// Opt-in only: pushing every copy (passwords included) to paired devices must never be a default.
+const clipboardSyncOptIn = process.env.ONEGLASS_CLIPBOARD_SYNC === '1' || process.argv.includes('--sync-clipboard');
+
 // Watch host clipboard and broadcast changes to paired devices when peers are active and osProc is not running
 setInterval(() => {
-  if (peers.size === 0 || osProc) return;
+  if (!clipboardSyncOptIn || peers.size === 0 || osProc) return;
   readHostClipboardAsync((text) => {
     if (text && text !== lastHostClipboard && text.trim().length > 0) {
       lastHostClipboard = text;
@@ -894,7 +897,8 @@ function startOSBridge() {
         try {
           const ev = JSON.parse(line);
           if (ev.type === 'os_clipboard' && ev.text) {
-            broadcast({
+            if (!clipboardSyncOptIn) continue;
+            broadcastAuthenticated({
               type: 'clipboard_sync',
               text: ev.text,
               fromName: 'macOS Clipboard',
@@ -1773,3 +1777,5 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`  Phone Tunnel: ${networkInfo.tunnelUrl}`);
   }
 });
+
+export { PHONE_URL };

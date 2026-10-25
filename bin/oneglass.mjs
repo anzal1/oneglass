@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -33,6 +32,8 @@ for (let i = 0; i < args.length; i++) {
     }
   } else if (arg === '--no-open') {
     noOpen = true;
+  } else if (arg === '--sync-clipboard') {
+    // read by server.mjs from process.argv
   } else if (arg === '--status') {
     checkStatus = true;
   } else if (arg === '--help' || arg === '-h') {
@@ -46,6 +47,7 @@ Options:
   --port <n>, -p <n>   HTTP/WebSocket server port (default: 8484)
   --no-open           Do not automatically open laptop browser tab
   --status            Inspect status of running OneGlass server and exit
+  --sync-clipboard    Send everything you copy on this computer to paired devices (off by default)
   --help, -h          Show this help message
 `);
     process.exit(0);
@@ -70,31 +72,18 @@ if (checkStatus) {
   }
 }
 
-function getLanIp() {
-  const nets = os.networkInterfaces();
-  const candidates = [];
-  for (const [name, list] of Object.entries(nets)) {
-    for (const net of list || []) {
-      if (net.family === 'IPv4' && !net.internal) {
-        const priority = name === 'en0' || name.startsWith('wlan') || name.startsWith('wl') ? 0 : 1;
-        candidates.push({ address: net.address, priority });
-      }
-    }
-  }
-  candidates.sort((a, b) => a.priority - b.priority);
-  return candidates[0]?.address || '127.0.0.1';
-}
-
-const lanIp = getLanIp();
-const phoneUrl = `http://${lanIp}:${port}/?role=phone`;
 const laptopUrl = `http://127.0.0.1:${port}`;
+
+// Import and start the main server. Its phone URL carries the pairing token, so the QR
+// printed here is the one a phone can actually pair with.
+const { PHONE_URL: phoneUrl } = await import(pathToFileURL(path.join(__dirname, '..', 'server.mjs')).href);
 
 QRCode.toString(phoneUrl, { type: 'terminal', small: true }, (err, qrAscii) => {
   console.log('\n  ┌──────────────────────────────────────────────────────────┐');
   console.log('  │  OneGlass: cross-device continuity & Spatial Display    │');
   console.log('  └──────────────────────────────────────────────────────────┘');
   console.log(`  Laptop Surface : \x1b[36m${laptopUrl}\x1b[0m`);
-  console.log(`  Phone Surface  : \x1b[32m${phoneUrl}\x1b[0m`);
+  console.log(`  Phone Surface  : scan this code with your phone camera (same Wi-Fi)`);
   console.log('  Command Bar    : Press \x1b[1m⌘K\x1b[0m inside the app\n');
   if (!err && qrAscii) {
     console.log(
@@ -106,12 +95,13 @@ QRCode.toString(phoneUrl, { type: 'terminal', small: true }, (err, qrAscii) => {
   }
 });
 
-// Import and start the main server
-await import(path.join(__dirname, '..', 'server.mjs'));
-
 if (!noOpen) {
-  const openCmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+  // On Windows `start` is a cmd built-in, not a program, so it has to go through cmd.
+  const [openCmd, openArgs] =
+    process.platform === 'darwin' ? ['open', [laptopUrl]]
+    : process.platform === 'win32' ? ['cmd', ['/c', 'start', '', laptopUrl]]
+    : ['xdg-open', [laptopUrl]];
   try {
-    spawn(openCmd, [laptopUrl], { stdio: 'ignore', detached: true }).unref();
+    spawn(openCmd, openArgs, { stdio: 'ignore', detached: true }).unref();
   } catch {}
 }
